@@ -1,0 +1,103 @@
+/* ==========================================================================
+   style.css —— 大屏的「外观」：配色、布局、卡片发光效果
+   --------------------------------------------------------------------------
+   想改 UI，90% 的情况只需要改下面 :root 里的变量（颜色/字号/间距），
+   不用动任何选择器里的具体数值。
+   ========================================================================== */
+
+/* ---------- 变量区：整个大屏的颜色和尺寸都从这里取 ---------- */
+:root {
+  --bg-1: #060c1c;              /* 背景渐变（上） */
+  --bg-2: #0a1730;              /* 背景渐变（下） */
+  --card-bg: rgba(16, 40, 78, .45);   /* 卡片底色（半透明） */
+  --border: rgba(0, 214, 255, .35);   /* 卡片描边 */
+  --glow: rgba(0, 214, 255, .18);     /* 卡片外发光 */
+  --cyan: #00e6ff;              /* 主色（标题、强调） */
+  --text: #e8f4ff;              /* 正文颜色 */
+  --text-dim: #7fa6c8;          /* 次要文字 */
+  --title-size: 18px;           /* 卡片标题字号 */
+  --gap: 12px;                  /* 卡片之间的间距 */
+}
+
+/* ---------- 全局重置 ---------- */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  width: 100%; height: 100%; overflow: hidden;      /* 大屏不出现滚动条 */
+  background: radial-gradient(circle at 50% 0%, var(--bg-2), var(--bg-1) 70%);
+  color: var(--text);
+  /* 字体优先用系统自带中文字体，避免方块字 */
+  font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif;
+}
+
+/* ---------- ① 舞台：固定 1920×1080，由 js/main.js 等比缩放 ---------- */
+#stage {
+  position: absolute; top: 0; left: 0;
+  width: 1920px; height: 1080px;
+  transform-origin: top left;                       /* 缩放锚点：左上角 */
+  padding: 10px 16px;
+  display: flex; flex-direction: column; gap: var(--gap);
+}
+
+/* ---------- ② 顶栏 ---------- */
+.top-bar {
+  height: 58px; flex: none;
+  display: flex; align-items: center; justify-content: center; position: relative;
+  /* 标题下方那条渐隐的光线 */
+  background: linear-gradient(90deg, transparent, rgba(0, 214, 255, .28), transparent) bottom / 100% 2px no-repeat;
+}
+.top-bar h1 {
+  font-size: 30px; letter-spacing: 6px; color: var(--cyan);
+  text-shadow: 0 0 18px rgba(0, 214, 255, .75);
+}
+.top-right {                                   /* 右上角：数据更新时间 + 时钟 */
+  position: absolute; right: 4px; top: 18px;
+  font-size: 14px; color: var(--text-dim); display: flex; gap: 18px;
+}
+#clock { color: var(--cyan); }
+
+/* ---------- ③ KPI 卡片行 ---------- */
+.kpi-row { flex: none; display: grid; grid-template-columns: repeat(6, 1fr); gap: var(--gap); }
+.kpi {
+  height: 96px; border: 1px solid var(--border); border-radius: 6px;
+  background: var(--card-bg); box-shadow: 0 0 18px var(--glow) inset;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.kpi .val { font-size: 30px; font-weight: 700; color: var(--cyan); text-shadow: 0 0 12px rgba(0, 214, 255, .6); }
+.kpi .lab { margin-top: 4px; font-size: 14px; color: var(--text-dim); letter-spacing: 1px; }
+
+/* ---------- ④ 主区三列：左中右宽度可以在这里改 ---------- */
+.main-grid {
+  flex: 1; min-height: 0;                        /* min-height:0 防止内容把布局撑破 */
+  display: grid; grid-template-columns: 1fr 1.25fr 1fr; gap: var(--gap);
+}
+/* 每一列内部再用 grid 分行：改比例就能改每张图的高度 */
+.col { display: grid; gap: var(--gap); min-height: 0; }
+.col-3   { grid-template-rows: 1fr 1fr 1fr; }        /* 左右两列：三张图等高 */
+.col-map { grid-template-rows: 1.7fr 1fr; }          /* 中间列：地图高、散点矮 */
+
+/* ---------- ⑤ 通用卡片 ---------- */
+.card {
+  display: flex; flex-direction: column;         /* 卡片内部：标题在上，图表占满剩下空间 */
+  min-height: 0;
+  border: 1px solid var(--border); border-radius: 6px;
+  background: var(--card-bg); box-shadow: 0 0 18px var(--glow) inset;
+  padding: 6px 10px 2px; overflow: hidden;
+}
+.card > h3 {
+  flex: none;                                    /* 标题高度固定 */
+  font-size: var(--title-size); font-weight: 500; color: var(--cyan); letter-spacing: 1px;
+  padding-left: 10px; position: relative; margin-bottom: 2px;
+}
+/* 标题左边那个小竖条 */
+.card > h3::before {
+  content: ""; position: absolute; left: 0; top: 3px; width: 3px; height: 15px;
+  background: var(--cyan); box-shadow: 0 0 8px var(--cyan);
+}
+
+/* ---------- ⑥ 图表容器：自动撑满卡片里剩下的空间 ---------- */
+/* 想固定某张图的高度，也可以给它加内联 style="height:200px" 并去掉这里的 flex:1 */
+.chart { flex: 1; min-height: 0; width: 100%; }
+
+/* ---------- ⑦ 底栏 + 页脚 ---------- */
+.bottom-card { flex: none; height: 176px; }      /* 底栏总高：想加高就改这里 */
+footer { flex: none; height: 20px; font-size: 12px; color: var(--text-dim); text-align: center; }

@@ -1,0 +1,22 @@
+# ---- 运行环境（体积大，不入库）----
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.idea/
+.vscode/
+
+# ---- 本地数据与日志 ----
+data/
+logs/
+*.db
+*.sqlite
+*.sqlite3
+*.cache
+jieba.cache
+
+# ---- 临时文件 ----
+~$*
+*.tmp
+_ppt_png/
+_copy_check.png

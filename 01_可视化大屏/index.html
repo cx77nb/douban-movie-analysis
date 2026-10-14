@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<!--
+==========================================================================
+ index.html —— 大屏的「骨架」：只负责“页面上有哪些块、块里放哪个图表容器”
+ ------------------------------------------------------------------------
+ 一个块 = 一个 <div class="card">；块里的 <div id="chartXXX"> 是 ECharts 的画布。
+ 想加减图表 / 调换位置 → 只改这个文件（画图的逻辑在 js/charts.js）。
+ 想改颜色、字体、圆角、块的高度 → 改 css/style.css（最上面的 :root 变量）。
+==========================================================================
+-->
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>豆瓣影视数据大屏</title>
+  <!-- style.css：所有外观样式（配色、栅格、发光边框） -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+<!-- #stage 是一块固定 1920×1080 的“画布”，js/main.js 会把它等比缩放到窗口大小，
+     这样不管屏幕多大，大屏的排版都不会乱。 -->
+<div id="stage">
+
+  <!-- ========== ① 顶栏：标题 + 当前时间 ========== -->
+  <header class="top-bar">
+    <h1>豆瓣影视数据大屏</h1>
+    <div class="top-right">
+      <span id="dataTime">数据更新：--</span>
+      <span id="clock">--:--:--</span>
+    </div>
+  </header>
+
+  <!-- ========== ② KPI 卡片行：6 个关键数字，内容由 js/main.js 填 ========== -->
+  <section class="kpi-row" id="kpiRow"></section>
+
+  <!-- ========== ③ 主区：左 / 中 / 右 三列 ========== -->
+  <main class="main-grid">
+
+    <!-- ---------- 左列：3 张图（col-3 = 三行等高；想调高度改 css 里的 .col-3） ---------- -->
+    <div class="col col-3">
+      <div class="card"><h3>类型 TOP10</h3><div class="chart" id="chartGenre"></div></div>
+      <div class="card"><h3>年代分布（作品数 / 平均分）</h3><div class="chart" id="chartDecade"></div></div>
+      <div class="card"><h3>短评星级构成</h3><div class="chart" id="chartStar"></div></div>
+    </div>
+
+    <!-- ---------- 中列：地图 + 散点（col-map = 上大下小） ---------- -->
+    <div class="col col-map">
+      <div class="card"><h3>短评用户 IP 归属地</h3><div class="chart" id="chartMap"></div></div>
+      <div class="card"><h3>评分 × 评价人数（每点一部作品）</h3><div class="chart" id="chartScatter"></div></div>
+    </div>
+
+    <!-- ---------- 右列：3 张图 ---------- -->
+    <div class="col col-3">
+      <div class="card"><h3>制片国家 / 地区 TOP10</h3><div class="chart" id="chartCountry"></div></div>
+      <div class="card"><h3>高分榜 TOP10</h3><div class="chart" id="chartTop"></div></div>
+      <div class="card"><h3>短评高频词</h3><div class="chart" id="chartWord"></div></div>
+    </div>
+  </main>
+
+  <!-- ========== ④ 底栏：短评数量随年份变化 ========== -->
+  <section class="card bottom-card">
+    <h3>短评数量随年份变化</h3>
+    <div class="chart" id="chartYear"></div>
+  </section>
+
+  <footer>
+    数据来源：豆瓣电影（本机 Python 采集，1052 部作品 / 4695 条短评）
+  </footer>
+</div>
+
+<!-- ==========================================================================
+     脚本加载顺序不能乱：
+     1) echarts          —— 画图引擎
+     2) echarts-wordcloud—— 词云插件（必须在 echarts 之后）
+     3) china-map.js     —— 中国地图轮廓（生成的）
+     4) data.js          —— 大屏数据（生成的，来自 analysis/02_export_web_data.py）
+     5) charts.js        —— 每张图的配置（你要改图就改这里）
+     6) main.js          —— 启动：缩放、填数字、时钟、窗口自适应
+     ========================================================================== -->
+<script src="js/lib/echarts.min.js"></script>
+<script src="js/lib/echarts-wordcloud.min.js"></script>
+<script src="js/china-map.js"></script>
+<script src="js/data.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
