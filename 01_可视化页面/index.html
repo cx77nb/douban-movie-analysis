@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>豆瓣影视数据 · 五屏可视化</title>
+<!-- 样式只有一个文件；想改配色看 css/style.css 最上面的 :root -->
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<!-- 整个大屏固定 1920×1080，由 js/main.js 等比缩放到你的窗口 -->
+<div id="stage">
+
+  <!-- ============ 顶部导航：01 概览 / 02 类型与年代 / … ============
+       点一下切换整屏内容。编号后的文字由 js/main.js 里 NAV 数组生成，
+       想加一屏 → 在这里加 <section class="view" id="view-xxx">，
+       main.js 的 NAV 里加一条，charts.js 的 buildXxx 里补画图即可。 -->
+  <header class="nav">
+    <div class="brand">
+      <h1>豆瓣影视数据</h1>
+      <span class="brand-sub" id="brandSub">DOUBAN FILM DATA</span>
+    </div>
+    <nav id="navBar"></nav>
+    <!-- 筛选条：默认收起，鼠标移到右上角才滑出来（Q5） -->
+    <div class="filter-dock" id="filterDock">
+      <div class="filter-handle">筛选</div>
+      <div class="filter-panel" id="chipBar"></div>
+    </div>
+  </header>
+
+  <!-- 视图堆叠区：所有 .view 都绝对定位在里面，切换时只切显隐、不搬 DOM -->
+  <div class="views">
+
+  <!-- ==================== 01 概览 ==================== -->
+  <section class="view" id="view-overview">
+    <!-- 数据带：1052 个小方块，让人真的「看到」体量（Q10） -->
+    <div class="scale" id="scaleBar"></div>
+
+    <div class="ov-body">
+      <!-- 左：世界地图，45 个国家/地区（Q11） -->
+      <div class="card ov-map">
+        <h3><span class="idx">01</span>制片国家与地区分布<span class="meta" id="mapNote"></span></h3>
+        <div class="chart" id="chartWorld"></div>
+      </div>
+
+      <!-- 右上：反直觉结论 + 37% 进度环（Q12） -->
+      <div class="card ov-finding">
+        <h3><span class="idx">02</span>一个反直觉的发现</h3>
+        <div class="finding" id="finding"></div>
+      </div>
+
+      <!-- 右下：三条核心结论 -->
+      <div class="card ov-notes">
+        <h3><span class="idx">03</span>这 1052 部作品是什么样</h3>
+        <div class="notes" id="overviewNotes"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 02 类型与年代 ==================== -->
+  <section class="view" id="view-genre">
+    <div class="grid-3">
+      <div class="card">
+        <h3><span class="idx">04</span>类型 TOP12<span class="meta">一部作品可属多个类型</span></h3>
+        <div class="chart" id="chartGenre"></div>
+      </div>
+      <div class="card">
+        <h3><span class="idx">05</span>年代分布<span class="meta">柱=作品数 线=平均分</span></h3>
+        <div class="chart" id="chartDecade"></div>
+      </div>
+      <div class="card">
+        <h3><span class="idx">06</span>评分 × 评价人数<span class="meta">纵轴取对数</span></h3>
+        <div class="chart" id="chartScatter"></div>
+      </div>
+    </div>
+    <div class="card wide">
+      <h3><span class="idx">07</span>短评数量随年份变化<span class="meta">4695 条短评，2005–2026</span></h3>
+      <div class="chart" id="chartYear"></div>
+    </div>
+  </section>
+
+  <!-- ==================== 03 国家与地区 ==================== -->
+  <section class="view" id="view-country">
+    <div class="country-body">
+      <div class="card">
+        <h3><span class="idx">08</span>国家 / 地区 TOP15<span class="meta">按作品数</span></h3>
+        <div class="chart" id="chartCountry"></div>
+      </div>
+      <div class="card">
+        <h3><span class="idx">09</span>全部 45 个国家 / 地区明细<span class="meta">拖到底可以看到小国</span></h3>
+        <div class="country-list" id="countryList"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 04 短评 ==================== -->
+  <section class="view" id="view-comment">
+    <div class="comment-body">
+      <div class="card">
+        <h3><span class="idx">10</span>短评高频词<span class="meta">jieba 分词</span></h3>
+        <div class="chart" id="chartWord"></div>
+      </div>
+      <div class="comment-right">
+        <!-- 双分母星级堆叠条（Q13） -->
+        <div class="card">
+          <h3><span class="idx">11</span>星级分布：两套分母<span class="meta">两条几乎重合</span></h3>
+          <div class="chart" id="chartStarDual"></div>
+        </div>
+        <!-- 真实短评示例 -->
+        <div class="card">
+          <h3><span class="idx">12</span>真实短评摘录<span class="meta">按「有用」数排序</span></h3>
+          <div class="samples" id="samples"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 05 建模 ==================== -->
+  <section class="view" id="view-model">
+    <div class="model-body">
+      <div class="card">
+        <h3><span class="idx">13</span>短评文本能预测星级吗<span class="meta">5 折交叉验证</span></h3>
+        <div class="model-verdict" id="modelVerdict"></div>
+        <div class="chart" id="chartModelBar"></div>
+      </div>
+      <div class="card">
+        <h3><span class="idx">14</span>好评与差评的特征词<span class="meta">逻辑回归权重</span></h3>
+        <div class="words-duo" id="wordsDuo"></div>
+      </div>
+      <div class="card">
+        <h3><span class="idx">15</span>三分类混淆矩阵<span class="meta">差评/中评/好评</span></h3>
+        <div class="chart" id="chartConfusion"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 06 榜单 ==================== -->
+  <section class="view" id="view-rank">
+    <div class="rank-body">
+      <div class="card">
+        <h3><span class="idx">16</span>豆瓣 Top250 上榜作品<span class="meta" id="rankNote"></span></h3>
+        <div class="rank-list" id="rankList"></div>
+      </div>
+      <div class="card">
+        <h3><span class="idx">17</span>全库高分榜 TOP30<span class="meta">同名作品只留评价人数最多</span></h3>
+        <div class="rank-list" id="rankAll"></div>
+      </div>
+    </div>
+  </section>
+
+  </div><!-- /.views -->
+
+  <footer>
+    <span id="footLeft">数据来源：豆瓣电影（本机 Python 采集 · 免登录）</span>
+    <span id="footRight">离线渲染 · 无需服务器 · ECharts 5.5.1</span>
+  </footer>
+</div>
+
+<!-- 数据：由 analysis/02_export_web_data.py 生成，不要手改 -->
+<script src="js/data.js"></script>
+<!-- 地图轮廓（本地打包，双击离线可用） -->
+<script src="js/world-map.js"></script>
+<!-- ECharts 本体 + 词云插件（本地文件，不联网） -->
+<script src="js/lib/echarts.min.js"></script>
+<script src="js/lib/echarts-wordcloud.min.js"></script>
+<!-- 图表配置 → 导航与切换 → 启动 -->
+<script src="js/charts.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
