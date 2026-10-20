@@ -217,17 +217,31 @@ html, body {
   color: var(--text-mute); text-transform: uppercase; -webkit-text-stroke: 0;
 }
 /* 1052 个方块：一行 40 个，26 行多一点，正好铺成一条 */
+.grid-wrap {
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  /* 方块群整体靠右放，吃掉数字区右侧的空白 */
+  margin-left: auto; margin-right: 8px;
+}
 .block-grid {
   display: grid; grid-template-columns: repeat(40, 7px); gap: 2px;
   width: fit-content;
-  /* 居中放在数字后：数字区宽度固定，方块吃掉剩余空间并居中 */
-  margin-left: auto; margin-right: auto;
 }
 .block-grid i {
   display: block; width: 7px; height: 7px; background: rgba(255, 255, 255, .13);
 }
 /* 每 100 个染一次强调色，方便一眼数出百位数 */
 .block-grid i.mark { background: var(--hot); }
+/* 方块群下方的说明行：讲清楚"一格 = 一部片" */
+.grid-cap {
+  font-family: var(--font-sans); font-size: 11.5px; letter-spacing: .6px;
+  color: var(--text-mute); -webkit-text-stroke: 0;
+  display: flex; align-items: center; gap: 6px;
+}
+.grid-cap b { color: var(--text-dim); font-weight: 400; }
+.grid-cap .dot {
+  display: inline-block; width: 7px; height: 7px;
+  background: var(--hot); margin-left: 8px;
+}
 
 .ov-body {
   flex: 1; min-height: 0;
@@ -235,6 +249,30 @@ html, body {
   gap: var(--gap);
 }
 .ov-map { grid-row: 1 / 3; }
+
+/* ===== 世界地图图例 =====
+   一排「色块 + 说明」：从少到多的四档 + 一个灰色「未收录」。
+   颜色和数据里 worldColor() 的色阶保持一致（改色时两边一起改）。 */
+.map-legend {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 0 0 8px; flex: none;
+}
+.map-legend .lg-row {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+}
+.map-legend .lg {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11.5px; color: var(--text-dim); letter-spacing: .2px;
+}
+.map-legend .lg i {
+  display: block; width: 22px; height: 11px; border-radius: 1px;
+}
+/* 未收录：和数据里 areaColor 一样的深灰 + 细边 */
+.map-legend .lg i.none { background: #1b2129; border: 1px solid rgba(255,255,255,.18); }
+.map-legend .lg-unit { font-size: 11px; color: var(--text-mute); margin-left: 2px; }
+.map-legend .lg-tip {
+  font-size: 11px; color: var(--text-mute); line-height: 1.45;
+}
 
 /* 反直觉结论区 */
 .finding { flex: 1; min-height: 0; display: flex; align-items: center; gap: 20px; padding: 0 6px; }
@@ -284,17 +322,20 @@ html, body {
 }
 .country-list {
   flex: 1; min-height: 0; overflow-y: auto;
-  /* 先行后列会让左栏排满、右栏空，所以指定 column 流：左栏排满再排右栏 */
+  /* 先行后列会让左栏排满、右栏空，所以指定 column 流：左栏排满再排右栏。
+     ★ grid-template-rows 用 fr 而不是固定 26px：43 个国家分两列各 22 行，
+     固定高度会让列表停在卡片中间、下面一截空白；用 fr 让这些行均分容器高度，
+     小国多的时候也不会溢出（溢出由 overflow-y 兜底滚动）。 */
   display: grid; grid-template-columns: 1fr 1fr;
-  grid-template-rows: repeat(22, 26px);
   grid-auto-flow: column;
+  grid-template-rows: repeat(22, minmax(0, 1fr));
   gap: 0 22px;
   padding-right: 6px;
 }
 .country-list::-webkit-scrollbar { width: 6px; }
 .country-list::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, .14); }
 .cl-row {
-  display: flex; align-items: center; gap: 8px; height: 26px;
+  display: flex; align-items: center; gap: 8px; min-height: 0;
   border-bottom: 1px solid rgba(255, 255, 255, .045);
   font-size: 13.5px;
 }
@@ -358,19 +399,39 @@ html, body {
   font-size: 13.5px; line-height: 1.75; color: var(--text-dim);
 }
 .model-verdict b { color: var(--hot); font-weight: 700; font-size: 16px; }
-/* 三块内容（好评词 / 差评词 / 读法）各占 1/3 高度、顶部对齐，
-   不再用 space-around —— 那样词条会散在整列里，中间留两大片空白。 */
-.words-duo { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 16px; justify-content: flex-start; }
-.words-col { flex: none; display: flex; flex-direction: column; gap: 7px; }
-.words-col:last-child { margin-top: auto; padding-top: 10px; border-top: 1px solid var(--line); }
-.words-col .cap {
-  font-family: var(--font-sans); font-size: 11.5px; letter-spacing: 1.6px;
-  color: var(--text-mute); -webkit-text-stroke: 0;
+/* 三块内容（好评词 / 差评词 / 读法）垂直分布。
+   ★ 词条要跟着卡片高度长大：14px 的字放在 900px 高的列里，
+   底部会空出一大片。所以词块均分剩余高度（flex:1），
+   .ws 用 align-content: space-between 让行距自然散开。 */
+.words-duo {
+  flex: 1; min-height: 0;
+  display: grid; grid-template-rows: 1fr 1fr auto; gap: 14px;
 }
-.words-col .ws { display: flex; flex-wrap: wrap; gap: 6px; align-content: flex-start; }
+.words-col {
+  display: flex; flex-direction: column; gap: 8px; min-height: 0;
+}
+.words-col .cap {
+  font-family: var(--font-sans); font-size: 12px; letter-spacing: 1.6px;
+  color: var(--text-mute); -webkit-text-stroke: 0; flex: none;
+}
+.words-col .ws {
+  flex: 1; min-height: 0;
+  display: flex; flex-direction: column;
+}
+/* 词条网格：每行 3 格、等宽等高，整块铺满 .ws 的高度 */
+.words-col .wtags {
+  flex: 1; min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-rows: minmax(0, 1fr);
+  gap: 8px;
+}
 .wtag {
-  font-size: 14px; padding: 5px 10px; border-radius: 2px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px; border-radius: 2px;
   border: 1px solid var(--line-strong); color: var(--text-dim);
+  line-height: 1.2; letter-spacing: .5px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .wtag.pos { color: var(--hot); border-color: rgba(255, 107, 74, .45); }
 .wtag.neg { color: #8fa6b8; border-color: rgba(143, 166, 184, .35); }

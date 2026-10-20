@@ -34,6 +34,33 @@ const FONT = '"Noto Sans SC","Microsoft YaHei","PingFang SC",sans-serif';
    注意：不能写 CHARTS.forEach —— 对象没有 forEach，会静默失效。 */
 const CHARTS = {};
 
+/* 地图用的英文国名 → 中文显示名。
+   注意两个地方都要用它：series.nameMap（悬停显示中文）和 series.regions 的 name
+   （区域着色）。因为 nameMap 会把底图区域名直接改成中文，regions 若还写英文就
+   匹配不上，整幅地图会只剩一种颜色且不报错。 */
+const NAME_MAP = {
+  'United States': '美国', 'China': '中国（含港台）', 'United Kingdom': '英国',
+  'Japan': '日本', 'Korea': '韩国', 'France': '法国', 'Italy': '意大利',
+  'Germany': '德国', 'India': '印度', 'Canada': '加拿大', 'Spain': '西班牙',
+  'Russia': '俄罗斯', 'Australia': '澳大利亚', 'Brazil': '巴西',
+  'New Zealand': '新西兰', 'Sweden': '瑞典', 'Denmark': '丹麦',
+  'Norway': '挪威', 'Finland': '芬兰', 'Poland': '波兰',
+  'Netherlands': '荷兰', 'Belgium': '比利时', 'Switzerland': '瑞士',
+  'Austria': '奥地利', 'Ireland': '爱尔兰', 'Mexico': '墨西哥',
+  'Argentina': '阿根廷', 'Thailand': '泰国', 'Iran': '伊朗',
+  'Turkey': '土耳其', 'Israel': '以色列', 'Czech Rep.': '捷克',
+  'Czechia': '捷克', 'Hungary': '匈牙利', 'Romania': '罗马尼亚',
+  'Bulgaria': '保加利亚', 'Greece': '希腊', 'Portugal': '葡萄牙',
+  'Ukraine': '乌克兰', 'Vietnam': '越南', 'Singapore': '新加坡',
+  'Malaysia': '马来西亚', 'Indonesia': '印度尼西亚', 'Philippines': '菲律宾',
+  'Egypt': '埃及', 'South Africa': '南非', 'Chile': '智利',
+  'Colombia': '哥伦比亚', 'Peru': '秘鲁', 'Cuba': '古巴',
+  'Iceland': '冰岛', 'Luxembourg': '卢森堡', 'United Arab Emirates': '阿联酋',
+  'Saudi Arabia': '沙特阿拉伯', 'Serbia': '塞尔维亚', 'Jordan': '约旦',
+  'Lebanon': '黎巴嫩', 'Cyprus': '塞浦路斯', 'Qatar': '卡塔尔',
+  'Belarus': '白俄罗斯', 'Latvia': '拉脱维亚', 'Morocco': '摩洛哥'
+};
+
 /* 在地图类图表画之前，必须先把 GeoJSON 注册给 ECharts。
    这里用「已注册就不重复注册」的写法，切屏多次也不会报错。 */
 function ensureMaps() {
@@ -68,7 +95,9 @@ function hBar(labels, values, opts = {}) {
   const gutter = 16 + String(maxV).length * 8;
   return {
     animationDuration: 500,
-    grid: { left: 0, right: gutter, top: 4, bottom: 0, containLabel: true },
+    // 行数少时留白会很难看：给 grid 留出上下余量，柱子按比例拉开，
+    // 卡片再高也不会只剩顶部一条。opts.spread 为 true 时把行距撑满。
+    grid: { left: 0, right: gutter, top: opts.spread ? 18 : 4, bottom: opts.spread ? 18 : 0, containLabel: true },
     // max 用来给条形图封顶：不做封顶的话，一个大数会把其他条全压成短棍
     xAxis: { type: 'value', show: false, max: opts.max },
     yAxis: {
@@ -88,7 +117,8 @@ function hBar(labels, values, opts = {}) {
     series: [{
       type: 'bar',
       data: values.slice().reverse(),
-      barWidth: opts.barWidth || 9,
+      // 行数少（<8）时把柱子加粗，否则 15 厘米高的卡片里一条线一样细
+      barWidth: opts.barWidth || (n <= 8 ? 16 : 9),
       itemStyle: {
         // 只给第一名（原数组最后一项）上强调色
         color: p => (p.dataIndex === n - 1 ? FX.accent : FX.bar),
@@ -104,78 +134,162 @@ function hBar(labels, values, opts = {}) {
 }
 
 /* ======================= 01 世界地图 ======================= */
-/* 数据来自 data.js 的 world：45 个国家（英文 geo 名 + 中文别名）。
-   没有收录的国家用深色底，和有色块区分开。 */
+/* 数据来自 data.js 的 world：43 个国家（英文 geo 名 + 中文别名 + 拆分来源）。
+   没有收录的国家用深色底 #1b2129，有收录的按作品数插值成暖色。
+
+   ★★ 为什么用 geo 组件而不是 map series（踩了很久的坑，别再改回去）
+   ECharts 5.5.1 里 `series: [{ type: 'map' }]` 有以下行为：
+     · 默认 colorBy='series'，visualMap 完全不参与区域着色；
+     · 显式写 colorBy:'data' 后，getData().getVisual('color') 仍是 undefined；
+     · data[].itemStyle.color 只进了 itemModel，绘制时被忽略；
+     · series.regions 写英文名不生效，写中文名（nameMap 翻译后）也不生效。
+   实测下来 map series 的 217 个区域永远统一取 itemStyle.areaColor，
+   而 **geo 组件的 regions 完全正常**（测过：216 灰 + 1 红）。
+   所以这里用 geo 承载地图和逐国颜色，map series 只放数据供 tooltip 用。 */
+
+/* 43 个国家的经纬度中心点（[经度, 纬度]）。
+   只用于给散点系列定位，让悬停提示能落到对应国家上。 */
+const GEO_CENTER = {
+  'United States': [-100, 40], 'China': [104, 35], 'United Kingdom': [-2.5, 54],
+  'Japan': [138, 37], 'Korea': [127.8, 36.5], 'France': [2.5, 46.6],
+  'Germany': [10.4, 51.1], 'Italy': [12.6, 42.8], 'Canada': [-100, 57],
+  'Russia': [100, 60], 'India': [79, 22], 'Spain': [-3.7, 40.4],
+  'Czech Rep.': [15.5, 49.8], 'Switzerland': [8.2, 46.8], 'Thailand': [101, 15.5],
+  'New Zealand': [172, -41], 'Sweden': [15, 62], 'Poland': [19.4, 52.1],
+  'Ireland': [-8, 53.2], 'Australia': [134, -25], 'Belgium': [4.5, 50.6],
+  'Netherlands': [5.6, 52.2], 'Hungary': [19.5, 47.2], 'Brazil': [-51, -10],
+  'Iran': [53, 32], 'Austria': [14.5, 47.6], 'Denmark': [9.5, 56],
+  'Singapore': [103.8, 1.35], 'South Africa': [24, -29], 'Cuba': [-79.5, 21.5],
+  'Serbia': [20.8, 44.2], 'Mexico': [-102, 23.6], 'Jordan': [36.5, 31.2],
+  'Norway': [9, 61.5], 'Luxembourg': [6.1, 49.8], 'Argentina': [-64, -34],
+  'Lebanon': [35.8, 33.9], 'Cyprus': [33.2, 35], 'Qatar': [51.2, 25.3],
+  'Belarus': [28, 53.5], 'Latvia': [24.6, 56.9], 'Iceland': [-19, 65],
+  'Morocco': [-6.5, 31.8]
+};
+
+/* 色阶：从「暗暖灰」到「亮珊瑚」，四段线性插值。
+   ★ 分段阈值取 log10 而不是线性归一化：
+   美国 374、中国 284，而 43 个国家里有 24 个只有 1~3 部作品。
+   线性映射会让这 24 个全贴在色阶最底端、等于隐形；
+   而 log 归一化又把差距压平（俄罗斯 18 部也吃到接近最亮的色）。
+   所以按「部数档位」切：
+     1~2 部  → t=0.00  极暗暖灰，只在图上"有个存在感"
+     3~5 部  → t=0.22
+     6~15 部 → t=0.40
+     16~60部 → t=0.62
+     60+ 部  → t=0.85 以上，越往上越亮
+   这样"有收录"和"很多收录"能一眼分开，图中也不再到处是亮橙。 */
+const WORLD_BANDS = [
+  [2, 0.00],      // ≤2 部
+  [5, 0.22],      // ≤5 部
+  [15, 0.40],     // ≤15 部
+  [60, 0.62],     // ≤60 部
+  [160, 0.80],    // ≤160 部
+  [Infinity, 1.00]
+];
+
+const WORLD_STOPS = [
+  [0.00, [0x33, 0x27, 0x23]],   // 极暗暖灰（仍能看出"有收录"）
+  [0.22, [0x5a, 0x32, 0x2b]],
+  [0.40, [0x83, 0x3f, 0x32]],
+  [0.62, [0xb4, 0x4d, 0x37]],
+  [0.80, [0xdd, 0x67, 0x45]],
+  [1.00, [0xff, 0x8a, 0x63]]    // 美国 374
+];
+
+/* 把「部数」映射成 0~1 的色阶位置 */
+function worldT(v) {
+  for (let i = 0; i < WORLD_BANDS.length; i++) {
+    if (v <= WORLD_BANDS[i][0]) return WORLD_BANDS[i][1];
+  }
+  return 1;
+}
+
+/* 把 0~1 的数映射成颜色字符串 */
+function worldColor(t) {
+  t = Math.max(0, Math.min(1, t));
+  for (let i = 1; i < WORLD_STOPS.length; i++) {
+    const p1 = WORLD_STOPS[i][0];
+    if (t <= p1) {
+      const p0 = WORLD_STOPS[i - 1][0];
+      const c0 = WORLD_STOPS[i - 1][1];
+      const c1 = WORLD_STOPS[i][1];
+      const k = (t - p0) / (p1 - p0 || 1);
+      const ch = j => Math.round(c0[j] + (c1[j] - c0[j]) * k).toString(16).padStart(2, '0');
+      return '#' + ch(0) + ch(1) + ch(2);
+    }
+  }
+  return '#ff8a63';
+}
+
 function buildWorld() {
   ensureMaps();                       // 先注册地图轮廓，否则 echarts 会报 map not found
   const w = D.world;
+
+  /* geo 的 regions 按「底图原名」匹配 —— 这里不写 nameMap，
+     所以一律用 GeoJSON 里的英文名，不要翻译成中文。 */
+  const regions = w.data.map(d => ({
+    name: d.name,
+    itemStyle: { areaColor: worldColor(worldT(d.value)) }
+  }));
+
+  // name → 中文 + 明细，给 tooltip 用
+  const byName = {};
+  w.data.forEach(d => { byName[d.name] = d; });
+
   draw('chartWorld', {
     animationDuration: 700,
     tooltip: {
       ...TIP,
+      trigger: 'item',
       formatter: p => {
-        const raw = (w.raw_kinds && w.raw_kinds[p.name]) || [p.name];
-        const hit = w.data.find(d => d.name === p.name);
-        const cn = hit ? hit.cn : p.name;
-        // 中国（含港台）这类多来源的条目，把拆分明细也显示出来
-        const parts = (w.by_geo && w.by_geo[p.name]) || null;
-        const detail = parts
+        const nm = (p.data && p.data.geoName) || p.name;
+        const hit = byName[nm];
+        if (!hit) return `<b>${nm}</b><br/><span style="color:${FX.mute}">未收录</span>`;
+        const parts = (w.by_geo && w.by_geo[nm]) || null;
+        const detail = parts && Object.keys(parts).length > 1
           ? '<br/><span style="color:' + FX.mute + ';font-size:11px">' +
             Object.keys(parts).map(k => k + ' ' + parts[k]).join(' / ') + '</span>'
-          : (raw.length > 1 ? `<br/><span style="color:${FX.mute};font-size:11px">原文写法：${raw.join(' / ')}</span>` : '');
-        return `<b>${cn}</b><br/>${p.value ? p.value + ' 部作品' : '无收录'}` + detail;
+          : '';
+        return `<b>${hit.cn || nm}</b><br/>` +
+               `<b style="color:${FX.accent}">${hit.value}</b> 部作品` + detail;
       }
     },
-    visualMap: {
-      // calculable 必须为 false：为 true 时会在图上叠一条白色滑块，很难看
-      // itemHeight 只有当图很高时才给数值，否则会撑出图布
-      show: true, min: 0, max: w.max, left: 6, bottom: 4,
-      calculable: false, itemWidth: 9, itemHeight: 74,
-      text: [w.max, '0'], textStyle: { color: FX.dim, fontSize: 11, fontFamily: FSANS },
-      // 色阶从「深灰蓝」到「珊瑚橘」。注意 374 是美国、218 是大陆，而 43 个国家里
-      // 有 11 个只有 1~3 部作品——如果色阶拉满，那 11 个国家在图上等于隐形。
-      // 所以线性映射之外，把地板色抬到 #4a3a35，让"只有一两部"的国家也看得见。
-      inRange: { color: ['#4a3a35', '#a8503c', '#e0603f', '#ff8a63'] }
-    },
-    series: [{
-      type: 'map',
+    // ① geo 组件：地图本体，按 regions 逐国上色
+    geo: {
       map: 'world',
       roam: false,
-      // 让地球把画布填满（默认会留白，四周一圈空白）
       left: 'center', top: 'center', width: '100%', height: '100%',
       zoom: 1.12,
-      // 英文国名 → 中文，鼠标悬停时显示中文
-      nameMap: {
-        'United States': '美国', 'China': '中国大陆', 'United Kingdom': '英国',
-        'Japan': '日本', 'Korea': '韩国', 'France': '法国', 'Italy': '意大利',
-        'Germany': '德国', 'India': '印度', 'Canada': '加拿大', 'Spain': '西班牙',
-        'Russia': '俄罗斯', 'Australia': '澳大利亚', 'Brazil': '巴西',
-        'Hong Kong': '中国香港', 'Taiwan': '中国台湾', 'New Zealand': '新西兰',
-        'Sweden': '瑞典', 'Denmark': '丹麦', 'Norway': '挪威', 'Finland': '芬兰',
-        'Poland': '波兰', 'Netherlands': '荷兰', 'Belgium': '比利时',
-        'Switzerland': '瑞士', 'Austria': '奥地利', 'Ireland': '爱尔兰',
-        'Mexico': '墨西哥', 'Argentina': '阿根廷', 'Thailand': '泰国',
-        'Iran': '伊朗', 'Turkey': '土耳其', 'Israel': '以色列',
-        'Czech Republic': '捷克', 'Czechia': '捷克', 'Hungary': '匈牙利',
-        'Romania': '罗马尼亚', 'Bulgaria': '保加利亚', 'Greece': '希腊',
-        'Portugal': '葡萄牙', 'Ukraine': '乌克兰', 'Vietnam': '越南',
-        'Singapore': '新加坡', 'Malaysia': '马来西亚', 'Indonesia': '印度尼西亚',
-        'Philippines': '菲律宾', 'Egypt': '埃及', 'South Africa': '南非',
-        'Chile': '智利', 'Colombia': '哥伦比亚', 'Peru': '秘鲁',
-        'Cuba': '古巴', 'Iceland': '冰岛', 'Luxembourg': '卢森堡',
-        'United Arab Emirates': '阿联酋', 'Saudi Arabia': '沙特阿拉伯'
+      label: { show: false },
+      itemStyle: {
+        // 没收录的国家
+        areaColor: '#1b2129',
+        borderColor: 'rgba(255,255,255,.14)',
+        borderWidth: .6
       },
-      label: { show: false },       // 国名全开会糊成一片，靠 hover 显示
-      itemStyle: { areaColor: '#1b2129', borderColor: 'rgba(255,255,255,.16)', borderWidth: .6 },
+      // 有收录的国家：逐国覆盖颜色
+      regions: regions,
       emphasis: {
         label: { show: true, color: FX.text, fontSize: 11.5, fontFamily: FONT },
-        itemStyle: { areaColor: FX.accent, borderColor: FX.accent }
+        itemStyle: { areaColor: FX.accent, borderColor: '#fff' }
       },
-      select: { disabled: true },
-      // data 里每项是 {name:'United States', value:374, cn:'美国', parts:{…}}，
-      // ECharts 的 map 只按 name 匹配底图并读 value，cn/parts 被原样带在 params.data 上，供 tooltip 用。
-      // 颜色由上面的 visualMap 统一映射：没数据的国家走 itemStyle.areaColor，有数据的按 value 上色。
-      data: w.data
+      select: { disabled: true }
+    },
+    series: [{
+      /* ② 一个「不可见」的散点系列：每个国家放一个极小的点，
+         只为让 tooltip / 悬停能拿到数值和中文名。点本身不显示。 */
+      type: 'scatter',
+      coordinateSystem: 'geo',
+      symbolSize: 1,
+      itemStyle: { color: 'transparent' },
+      silent: false,
+      tooltip: { show: true },
+      data: w.data.map(d => ({
+        value: GEO_CENTER[d.name] || [],
+        name: d.cn,
+        geoName: d.name
+      }))
     }]
   });
 }
@@ -338,7 +452,10 @@ function buildYear() {
 /* ======================= 06 国家 TOP15 ======================= */
 function buildCountry() {
   const rows = D.world.top.slice(0, 15);
-  draw('chartCountry', hBar(rows.map(r => r.name), rows.map(r => r.value), { unit: '部', labelSize: 13.5 }));
+  /* 15 行铺满一张 1080 高的大卡片，行距撑开会比挤在顶部好看得多，
+     所以 spread:true（hBar 里把 grid 上下各留 18px 呼吸位）。 */
+  draw('chartCountry', hBar(rows.map(r => r.name), rows.map(r => r.value),
+    { unit: '部', labelSize: 14, spread: true }));
 }
 
 /* ======================= 07 词云 ======================= */

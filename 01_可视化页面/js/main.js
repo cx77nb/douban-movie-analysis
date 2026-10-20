@@ -125,7 +125,10 @@ function buildScale() {
     box.appendChild(d);
   });
 
-  // 1052 个方块：用 CSS Grid 一次排好，不逐个 appendChild（那样会慢）
+  // 1052 个方块：一个方块 = 一部作品，每 100 部标一个橙点（方便数到千）。
+  // 用 CSS Grid 一次排好，不逐个 appendChild（那样会慢）。
+  const gridWrap = document.createElement('div');
+  gridWrap.className = 'grid-wrap';
   const grid = document.createElement('div');
   grid.className = 'block-grid';
   let html = '';
@@ -133,7 +136,37 @@ function buildScale() {
     html += (i % 100 === 0 ? '<i class="mark"></i>' : '<i></i>');
   }
   grid.innerHTML = html;
-  box.appendChild(grid);
+  // 图下方一行说明：不讲清楚读者不知道这一片方块是什么
+  const cap = document.createElement('div');
+  cap.className = 'grid-cap';
+  cap.innerHTML =
+    `<b>每格 1 部</b>　共 <b>${s.works}</b> 部　` +
+    `<i class="dot"></i>橙点 = 每满 100 部的刻度`;
+  gridWrap.appendChild(grid);
+  gridWrap.appendChild(cap);
+  box.appendChild(gridWrap);
+}
+
+/* ======================= ① 概览：地图图例 ======================= */
+/* 让「未收录」这件事自己说清楚：灰色 = 本数据集没抓到该国的作品，
+   不是数据出错，而是采样范围只覆盖到 43 个国家/地区。
+   色块颜色必须和 charts.js 的 WORLD_STOPS 一致。 */
+function fillMapLegend() {
+  const box = document.getElementById('mapLegend');
+  if (!box) return;
+  const w = D.world || {};
+  const items = [
+    ['#332723', '1–2'],
+    ['#833f32', '3–15'],
+    ['#b44d37', '16–60'],
+    ['#ff8a63', '60+'],
+    ['#1b2129', '未收录', true]
+  ];
+  box.innerHTML =
+    `<div class="lg-row">${items.map(([c, t, none]) =>
+      `<span class="lg"><i${none ? ' class="none"' : ''} style="${none ? '' : 'background:' + c}"></i>${t}</span>`
+    ).join('')}<span class="lg-unit">部作品</span></div>`
+    + `<div class="lg-tip">灰色 = 本数据集在这 ${w.n_countries || 43} 个国家/地区之外，不是数据出错</div>`;
 }
 
 /* ======================= ① 概览：反直觉结论 + 37% 环 ======================= */
@@ -228,21 +261,28 @@ function fillWords() {
   const m = D.model;
   // 正负词各取前 12 个；去重（"五星" 出现过两次）
   const uniq = a => [...new Set(a)].slice(0, 12);
+  /* 为什么要包一层 .wtags：.ws 是 flex 换行容器，
+     词条按内容宽度排列，最后一行会参差不齐、底部留白。
+     包成 grid（每行 3 格、格子等宽等高）后整块正好铺满，
+     字号也能调大，短词长词看起来一样齐。 */
+  const tags = (arr, cls) => `<div class="ws"><div class="wtags">${
+    uniq(arr).map(w => `<span class="wtag ${cls}">${w}</span>`).join('')
+  }</div></div>`;
   document.getElementById('wordsDuo').innerHTML = `
     <div class="words-col">
       <span class="cap">推动「给五星」的词</span>
-      <div class="ws">${uniq(m.pos_words).map(w => `<span class="wtag pos">${w}</span>`).join('')}</div>
+      ${tags(m.pos_words, 'pos')}
     </div>
     <div class="words-col">
       <span class="cap">推动「不给满分」的词</span>
-      <div class="ws">${uniq(m.neg_words).map(w => `<span class="wtag neg">${w}</span>`).join('')}</div>
+      ${tags(m.neg_words, 'neg')}
     </div>
     <div class="words-col">
       <span class="cap">一句话读法</span>
-      <div class="ws" style="font-size:13.5px;line-height:1.8;color:#9aa1a8;display:block">
-        好评靠<b style="color:#ff6b4a">情绪爆发</b>（感叹号、童年、温暖），<br/>
-        差评靠<b style="color:#8fa6b8">礼貌转折</b>（「，但」「其实」「有点」），<br/>
-        而不是脏话。中文差评是「欲扬先抑」的。
+      <div class="ws" style="font-size:13.5px;line-height:1.75;color:#9aa1a8;display:block">
+        好评靠<b style="color:#ff6b4a">情绪爆发</b>（感叹号、童年、温暖），
+        差评靠<b style="color:#8fa6b8">礼貌转折</b>（「，但」「其实」「有点」），
+        而不是脏话 —— 中文差评是「欲扬先抑」的。
       </div>
     </div>`;
 }
@@ -276,6 +316,7 @@ function boot() {
   fitStage();
   buildNav();
   buildScale();
+  fillMapLegend();
   fillFinding();
   fillNotes();
   fillCountryList();
