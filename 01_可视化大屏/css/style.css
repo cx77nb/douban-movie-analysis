@@ -13,8 +13,11 @@
   --border: rgba(0, 214, 255, .35);   /* 卡片描边 */
   --glow: rgba(0, 214, 255, .18);     /* 卡片外发光 */
   --cyan: #00e6ff;              /* 主色（标题、强调） */
+  --gold: #ffc44d;              /* 金色（高分榜等强调数字） */
   --text: #e8f4ff;              /* 正文颜色 */
   --text-dim: #7fa6c8;          /* 次要文字 */
+  --dot: rgba(120, 200, 255, .085);   /* 背景点阵的颜色：越淡越含蓄，0.05 几乎看不见 */
+  --hair: rgba(0, 214, 255, .16);     /* 细分隔线颜色（KPI 之间、卡片标题下方） */
   --title-size: 18px;           /* 卡片标题字号 */
   --gap: 12px;                  /* 卡片之间的间距 */
 }
@@ -23,7 +26,13 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body {
   width: 100%; height: 100%; overflow: hidden;      /* 大屏不出现滚动条 */
-  background: radial-gradient(circle at 50% 0%, var(--bg-2), var(--bg-1) 70%);
+  /* 两层背景：上面一层是点阵网格（给纯色底加一点"仪表盘"颗粒感），
+     下面一层还是原来的径向渐变。想调点阵疏密就改 background-size 的 26px。 */
+  background-color: var(--bg-1);
+  background-image:
+    radial-gradient(circle, var(--dot) 1px, transparent 1.4px),
+    radial-gradient(circle at 50% 0%, var(--bg-2), var(--bg-1) 70%);
+  background-size: 26px 26px, 100% 100%;
   color: var(--text);
   /* 字体优先用系统自带中文字体，避免方块字 */
   font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif;
@@ -49,21 +58,70 @@ html, body {
   font-size: 30px; letter-spacing: 6px; color: var(--cyan);
   text-shadow: 0 0 18px rgba(0, 214, 255, .75);
 }
+/* 标题里那个渐变色块（index.html 里把要变色的字包在 <span class="grad"> 里）。
+   ★ 注意：色标别铺太多——只有两三个字时，色标一多就会糊成白色。
+   想换彩带配色就改下面 gradient 里的三个颜色。 */
+.top-bar h1 .grad {
+  background: linear-gradient(90deg, #00d5ff 0%, #b06cff 52%, #ff5fa2 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+  text-shadow: none;                 /* 渐变字不能再叠加阴影，否则会糊成一片 */
+  filter: drop-shadow(0 0 14px rgba(0, 214, 255, .35));   /* 用 filter 代替阴影发光 */
+}
 .top-right {                                   /* 右上角：数据更新时间 + 时钟 */
   position: absolute; right: 4px; top: 18px;
   font-size: 14px; color: var(--text-dim); display: flex; gap: 18px;
 }
 #clock { color: var(--cyan); }
 
-/* ---------- ③ KPI 卡片行 ---------- */
-.kpi-row { flex: none; display: grid; grid-template-columns: repeat(6, 1fr); gap: var(--gap); }
-.kpi {
-  height: 96px; border: 1px solid var(--border); border-radius: 6px;
-  background: var(--card-bg); box-shadow: 0 0 18px var(--glow) inset;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
+/* ---------- ②-b 左上角筛选按钮（chips） ---------- */
+/* 两组：口径（全部/电影/剧集）、年代（全部/1980s/2010s/2020s）。
+   按钮由 js/main.js 的 buildChips() 生成，这里只管长相。 */
+.top-left {
+  position: absolute; left: 4px; top: 16px;
+  display: flex; align-items: center; gap: 20px;
 }
-.kpi .val { font-size: 30px; font-weight: 700; color: var(--cyan); text-shadow: 0 0 12px rgba(0, 214, 255, .6); }
-.kpi .lab { margin-top: 4px; font-size: 14px; color: var(--text-dim); letter-spacing: 1px; }
+.chip-group { display: flex; align-items: center; gap: 6px; }
+.chip-group .cap {
+  font-size: 10.5px; letter-spacing: 1.5px; color: var(--text-dim); margin-right: 2px;
+}
+.chip {
+  font-family: inherit; font-size: 11.5px; line-height: 1;
+  padding: 5px 11px; border-radius: 999px;
+  border: 1px solid var(--hair); background: transparent; color: var(--text-dim);
+  cursor: pointer; transition: all .15s;
+}
+.chip:hover { color: var(--text); border-color: rgba(0, 214, 255, .45); }
+.chip.on {                                /* 当前选中：实心青色 */
+  background: var(--cyan); border-color: var(--cyan);
+  color: #04121f; font-weight: 700;
+}
+
+/* ---------- ③ KPI 卡片行：不要卡片，只要「数字 + 标签」 ---------- */
+/* 参考 awwwards 上 WC 2026 Data Portraits 的写法：去掉底色和描边，
+   靠字号反差和细分隔线分区。 */
+.kpi-row {
+  flex: none; height: 116px;
+  display: grid; grid-template-columns: repeat(6, 1fr); align-items: center;
+  border-bottom: 1px solid var(--hair);      /* 整行下面一条细线 */
+}
+.kpi {
+  height: 100%;
+  display: flex; flex-direction: column; align-items: flex-start; justify-content: center;
+  padding-left: 18px;
+  border-left: 1px solid var(--hair);        /* 每个数字左边的细分隔线 */
+}
+.kpi:first-child { border-left: none; padding-left: 4px; }   /* 第一个不画线，对齐左边缘 */
+.kpi .val {
+  font-size: 46px; line-height: 1.05; font-weight: 700; letter-spacing: -1px;
+  color: var(--text);                        /* 数字用白色，和满屏青色拉开层次 */
+  font-variant-numeric: tabular-nums;        /* 数字等宽，换数值时不会左右跳 */
+  text-shadow: 0 0 22px rgba(0, 214, 255, .45);
+}
+.kpi .lab {
+  margin-top: 7px; font-size: 11.5px; letter-spacing: 2.5px;
+  color: var(--text-dim);
+}
 
 /* ---------- ④ 主区三列：左中右宽度可以在这里改 ---------- */
 .main-grid {
@@ -85,18 +143,57 @@ html, body {
 }
 .card > h3 {
   flex: none;                                    /* 标题高度固定 */
+  display: flex; align-items: baseline; gap: 9px;
   font-size: var(--title-size); font-weight: 500; color: var(--cyan); letter-spacing: 1px;
-  padding-left: 10px; position: relative; margin-bottom: 2px;
+  padding-bottom: 6px; margin-bottom: 4px;
+  border-bottom: 1px solid var(--hair);          /* 标题下方一条细线（原来是小竖条） */
 }
-/* 标题左边那个小竖条 */
-.card > h3::before {
-  content: ""; position: absolute; left: 0; top: 3px; width: 3px; height: 15px;
-  background: var(--cyan); box-shadow: 0 0 8px var(--cyan);
+/* 标题前面的分区编号 01 / 02 / …（index.html 里的 <span class="idx">） */
+.card > h3 .idx {
+  font-size: 12px; font-weight: 700; letter-spacing: 1px;
+  color: var(--cyan); opacity: .5;               /* 编号压暗，不抢标题 */
+  font-variant-numeric: tabular-nums;
+}
+/* 标题右端的小字注释（比如地图上那句"另有海外 N 条未入图"，由 main.js 加） */
+.card > h3 .meta {
+  margin-left: auto;                             /* 推到最右边 */
+  font-size: 11px; font-weight: 400; letter-spacing: 0; color: var(--text-dim);
 }
 
 /* ---------- ⑥ 图表容器：自动撑满卡片里剩下的空间 ---------- */
 /* 想固定某张图的高度，也可以给它加内联 style="height:200px" 并去掉这里的 flex:1 */
 .chart { flex: 1; min-height: 0; width: 100%; }
+
+/* ---------- ⑥-b 高分榜的排名表（用 HTML 画，不是 ECharts） ---------- */
+/* grid-auto-rows:1fr → 10 行自动平分卡片剩余高度，行数变化也不会溢出 */
+.rank {
+  flex: 1; min-height: 0; overflow: hidden;
+  display: grid;
+  /* minmax(0,1fr) 才不会让文字把行高撑开：10 行严格平分卡片剩余高度 */
+  grid-auto-rows: minmax(0, 1fr);
+  padding: 0 2px;
+}
+.rank-row {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) 40px 34px 52px;   /* 名次 / 片名 / 年份 / 评分 / 人数 */
+  align-items: center; column-gap: 8px;
+  border-bottom: 1px solid rgba(0, 214, 255, .07);
+  border-radius: 4px; padding: 0 4px;
+}
+.rank-row:last-child { border-bottom: none; }
+.rank-row:hover { background: rgba(0, 214, 255, .07); }
+.rank-row .rk {
+  font-size: 11.5px; font-weight: 700; color: var(--cyan); opacity: .55;
+  font-variant-numeric: tabular-nums;
+}
+.rank-row .rk-name {
+  font-size: 12.5px; color: var(--text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;   /* 片名太长就省略 */
+}
+.rank-row .rk-year { font-size: 10px; color: var(--text-dim); text-align: right; font-variant-numeric: tabular-nums; }
+.rank-row .rk-score { font-size: 13px; font-weight: 700; color: var(--gold); text-align: right; font-variant-numeric: tabular-nums; }
+.rank-row .rk-votes { font-size: 10px; color: var(--text-dim); text-align: right; font-variant-numeric: tabular-nums; }
+.rank-empty { color: var(--text-dim); font-size: 12px; display: flex; align-items: center; justify-content: center; }
 
 /* ---------- ⑦ 底栏 + 页脚 ---------- */
 .bottom-card { flex: none; height: 176px; }      /* 底栏总高：想加高就改这里 */

@@ -47,22 +47,58 @@ function tick() {
   document.getElementById('dataTime').textContent = '数据更新：' + D.updated;
 }
 
-/* 3.5 地图标题上补一句：海外用户不在中国地图里 */
+/* 3.5 地图标题右侧补一句：海外用户不在中国地图里
+   ★ 注意：不能用 h3.textContent += '…'，那会把标题里的 <span class="idx">01</span>
+     编号整个覆盖掉。改成新建一个 <span class="meta"> 追加到标题末尾（由 CSS 推到最右）。 */
 function noteMapTitle() {
   const h3 = document.querySelector('#chartMap').parentNode.querySelector('h3');
-  if (h3) h3.textContent += '（另有海外 ' + D.overseas + ' 条未入图）';
+  if (!h3) return;
+  const meta = document.createElement('span');
+  meta.className = 'meta';
+  meta.textContent = '另有海外 ' + D.overseas + ' 条未入图';
+  h3.appendChild(meta);
+}
+
+/* 3.6 顶部筛选按钮（chips）：口径（全部/电影/剧集）× 年代
+   按钮本身在这里生成，点完之后「哪些图跟着变」由 charts.js 的 refreshFiltered() 负责。 */
+function buildChips() {
+  const f = D.filters;
+  const box = document.getElementById('chipBar');
+  if (!f || !box) return;                 // 老版 data.js 没有 filters 就整块跳过
+
+  // 一组按钮 = 一个小标题 + 若干 chip；当前选中的那个加 class="on"
+  function group(cap, items, key) {
+    return '<span class="chip-group"><span class="cap">' + cap + '</span>' +
+      items.map(function (it) {
+        return '<button class="chip' + (STATE[key] === it.key ? ' on' : '') +
+          '" data-key="' + key + '" data-val="' + it.key + '">' + it.label + '</button>';
+      }).join('') + '</span>';
+  }
+
+  box.innerHTML = group('口径', f.calibers, 'caliber') + group('年代', f.decades, 'decade');
+
+  // 点按钮 → 改 STATE → 同一组里只亮一个 → 让受影响的图重画
+  box.querySelectorAll('.chip').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      STATE[btn.dataset.key] = btn.dataset.val;
+      box.querySelectorAll('.chip[data-key="' + btn.dataset.key + '"]')
+        .forEach(function (o) { o.classList.toggle('on', o === btn); });
+      refreshFiltered();                  // 在 charts.js 里
+    });
+  });
 }
 
 /* 4. 窗口尺寸变化：重新缩放 + 重画（ECharts 必须手动 resize） */
 window.addEventListener('resize', function () {
   fitStage();
-  CHARTS.forEach(function (c) { c.resize(); });
+  Object.values(CHARTS).forEach(function (c) { c.resize(); });   // CHARTS 是 id->实例 的对象
 });
 
 /* 页面加载完成后再画图，保证容器高度已经算好 */
 window.addEventListener('load', function () {
   fitStage();
   fillKpi();
+  buildChips();
   noteMapTitle();
   tick();
   setInterval(tick, 1000);

@@ -21,9 +21,12 @@
      这样不管屏幕多大，大屏的排版都不会乱。 -->
 <div id="stage">
 
-  <!-- ========== ① 顶栏：标题 + 当前时间 ========== -->
+  <!-- ========== ① 顶栏：左侧筛选按钮 + 标题 + 右侧时间 ========== -->
   <header class="top-bar">
-    <h1>豆瓣影视数据大屏</h1>
+    <!-- 筛选按钮（chips）：内容由 js/main.js 的 buildChips() 生成，
+         数据来自 js/data.js 的 filters；点一下会重画 01/02/06/07 四张图 -->
+    <div class="top-left" id="chipBar"></div>
+    <h1>豆瓣<span class="grad">影视</span>数据大屏</h1>
     <div class="top-right">
       <span id="dataTime">数据更新：--</span>
       <span id="clock">--:--:--</span>
@@ -38,28 +41,28 @@
 
     <!-- ---------- 左列：3 张图（col-3 = 三行等高；想调高度改 css 里的 .col-3） ---------- -->
     <div class="col col-3">
-      <div class="card"><h3>类型 TOP10</h3><div class="chart" id="chartGenre"></div></div>
-      <div class="card"><h3>年代分布（作品数 / 平均分）</h3><div class="chart" id="chartDecade"></div></div>
-      <div class="card"><h3>短评星级构成</h3><div class="chart" id="chartStar"></div></div>
+      <div class="card"><h3><span class="idx">01</span>类型 TOP10</h3><div class="chart" id="chartGenre"></div></div>
+      <div class="card"><h3><span class="idx">02</span>年代分布（作品数 / 平均分）</h3><div class="chart" id="chartDecade"></div></div>
+      <div class="card"><h3><span class="idx">03</span>短评星级构成</h3><div class="chart" id="chartStar"></div></div>
     </div>
 
     <!-- ---------- 中列：地图 + 散点（col-map = 上大下小） ---------- -->
     <div class="col col-map">
-      <div class="card"><h3>短评用户 IP 归属地</h3><div class="chart" id="chartMap"></div></div>
-      <div class="card"><h3>评分 × 评价人数（每点一部作品）</h3><div class="chart" id="chartScatter"></div></div>
+      <div class="card"><h3><span class="idx">04</span>短评用户 IP 归属地</h3><div class="chart" id="chartMap"></div></div>
+      <div class="card"><h3><span class="idx">05</span>评分 × 评价人数（每点一部作品）</h3><div class="chart" id="chartScatter"></div></div>
     </div>
 
     <!-- ---------- 右列：3 张图 ---------- -->
     <div class="col col-3">
-      <div class="card"><h3>制片国家 / 地区 TOP10</h3><div class="chart" id="chartCountry"></div></div>
-      <div class="card"><h3>高分榜 TOP10</h3><div class="chart" id="chartTop"></div></div>
-      <div class="card"><h3>短评高频词</h3><div class="chart" id="chartWord"></div></div>
+      <div class="card"><h3><span class="idx">06</span>制片国家 / 地区 TOP10</h3><div class="chart" id="chartCountry"></div></div>
+      <div class="card"><h3><span class="idx">07</span>高分榜 TOP10</h3><div class="rank" id="rankTop"></div></div>
+      <div class="card"><h3><span class="idx">08</span>短评高频词</h3><div class="chart" id="chartWord"></div></div>
     </div>
   </main>
 
   <!-- ========== ④ 底栏：短评数量随年份变化 ========== -->
   <section class="card bottom-card">
-    <h3>短评数量随年份变化</h3>
+    <h3><span class="idx">09</span>短评数量随年份变化</h3>
     <div class="chart" id="chartYear"></div>
   </section>
 

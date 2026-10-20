@@ -12,7 +12,9 @@
 > `EXPORT_TABLES` 中被注释的两行取消注释。
 
 > **可视化大屏（ECharts + HTML/CSS/JS）** —— 在 `web\` 文件夹里：双击 `web\index.html` 就能看，
-> 不需要装任何东西、不需要联网。代码怎么改见 **[web/说明文档.md](web/说明文档.md)**；
+> 不需要装任何东西、不需要联网。**9 张图 + 6 组 KPI + 顶部筛选条**（口径 × 年代，切换即时重画 4 张图），
+> 高分榜是排名表；改版前后对照见 `web\改版对比_20261020.png`。
+> 代码怎么改见 **[web/说明文档.md](web/说明文档.md)**；
 > 数据由 `analysis\01_build_dataset.py` → `analysis\02_export_web_data.py` 生成到 `web\js\data.js`。
 
 > **完整项目报告（给老师和同学展示用）** —— **[analysis/报告.md](analysis/报告.md)**：

@@ -220,7 +220,83 @@ word_cloud = [{"name": w, "value": n} for w, n in Counter(words).most_common(120
 print("词云来源：%s，取词 %d 个" % (src, len(word_cloud)))
 
 
-# ---------- 13. 写文件 ----------
+# ---------- 13. 筛选数据：按「口径（全部/电影/剧集）× 年代」重新聚合 ----------
+# 大屏顶部的筛选按钮（chips）就是读这里的数据。
+#   · 年代分布图（图 02）只受「口径」影响 —— 用年代去筛年代分布没有意义
+#   · 类型 TOP10（图 01）、制片国家（图 06）、高分榜（图 07）同时受「口径 + 年代」影响
+# 所以这里出两份：byCaliber（只按口径）和 cross（口径 × 年代 的交叉）。
+
+CALIBERS = [("all", "全部", None), ("movie", "电影", "movie"), ("tv", "剧集", "tv")]
+DECADES = [("all", "不限", None), ("1980s", "1980s", "1980s"),
+           ("2010s", "2010s", "2010s"), ("2020s", "2020s", "2020s")]
+
+
+def calc_genre(movs):
+    """这批作品里的类型 Top10。"""
+    c = Counter()
+    for m in movs:
+        for g in split_multi(m.get("genres")):
+            c[g] += 1
+    return [{"name": g, "value": n} for g, n in c.most_common(10)]
+
+
+def calc_country(movs):
+    """这批作品里的制片国家 Top10。"""
+    c = Counter()
+    for m in movs:
+        for x in split_multi(m.get("countries")):
+            c[x] += 1
+    return [{"name": x, "value": n} for x, n in c.most_common(10)]
+
+
+def calc_decade(movs):
+    """这批作品的年代分布（柱=数量，线=平均分）。"""
+    cnt, total = Counter(), Counter()
+    for m in movs:
+        d = (m.get("decade") or "").strip()
+        if not d:
+            continue
+        cnt[d] += 1
+        if m.get("has_rating") == "1":
+            total[d] += num(m["rating_num"])
+    labels = sorted(cnt.keys())
+    return {"labels": labels,
+            "counts": [cnt[d] for d in labels],
+            "avg": [round(total[d] / cnt[d], 2) if cnt[d] else 0 for d in labels]}
+
+
+def calc_top(movs, n=10):
+    """这批作品里的高分榜 Top N（同名作品只留评价人数最多的那部）。"""
+    pool = [m for m in movs if m.get("has_rating") == "1"]
+    out, seen = [], set()
+    for m in sorted(pool, key=top_key, reverse=True):
+        if m["title"] in seen:
+            continue
+        seen.add(m["title"])
+        out.append({"name": m["title"], "rating": num(m["rating_num"]),
+                    "votes": int(num(m["votes"])), "year": m.get("year") or "",
+                    "genres": (m.get("genres") or "").replace("|", " ")})
+        if len(out) >= n:
+            break
+    return out
+
+
+by_caliber, cross = {}, {}
+for ck, _clab, sub in CALIBERS:
+    pool = movies if sub is None else [m for m in movies if m.get("subtype") == sub]
+    by_caliber[ck] = {"decade": calc_decade(pool), "n": len(pool)}
+    for dk, _dlab, dec in DECADES:
+        cell = pool if dec is None else [m for m in pool if (m.get("decade") or "") == dec]
+        cross["%s|%s" % (ck, dk)] = {
+            "genreTop": calc_genre(cell),
+            "countryTop": calc_country(cell),
+            "topMovies": calc_top(cell),
+            "n": len(cell),
+        }
+print("筛选数据：口径 %d 种 × 年代 %d 种 = %d 组" % (len(CALIBERS), len(DECADES), len(cross)))
+
+
+# ---------- 14. 写文件 ----------
 dash = {
     "updated": __import__("datetime").datetime.now().strftime("%Y-%m-%d %H:%M"),
     "kpi": kpi,
@@ -235,6 +311,12 @@ dash = {
     "topMovies": top_movies,
     "yearTrend": year_trend,
     "wordCloud": word_cloud,
+    "filters": {
+        "calibers": [{"key": k, "label": lab} for k, lab, _s in CALIBERS],
+        "decades": [{"key": k, "label": lab} for k, lab, _d in DECADES],
+        "byCaliber": by_caliber,
+        "cross": cross,
+    },
 }
 
 os.makedirs(os.path.dirname(OUT_DATA), exist_ok=True)

@@ -42,24 +42,52 @@ const TIP = {
 // 图表文字通用字体设置
 const FONT = { fontFamily: 'Microsoft YaHei, PingFang SC, sans-serif' };
 
-const CHARTS = [];                       // 存所有图表实例，窗口变化时统一 resize
+const CHARTS = {};                       // id -> 图表实例（窗口变化时统一 resize；切换筛选时复用同一实例）
 
-// 1. 把一个 option 画到 id 对应的容器里
+/* 1. 把一个 option 画到 id 对应的容器里。
+   同一个 id 第二次调用会**复用实例并彻底重画**（setOption 第二个参数 true = notMerge），
+   顶部筛选按钮切换时就靠这一点刷新，不会重复创建 canvas。 */
 function draw(id, option) {
   const el = document.getElementById(id);
   if (!el) return null;                  // 容器不存在就跳过，避免报错
-  const chart = echarts.init(el);
-  chart.setOption(option);
-  CHARTS.push(chart);                    // 记住它，供自适应使用
+  let chart = CHARTS[id];
+  if (!chart) { chart = echarts.init(el); CHARTS[id] = chart; }
+  chart.setOption(option, true);
   return chart;
 }
 
 const D = window.DASH_DATA;              // 数据（来自 js/data.js）
 const TOP = 10;                          // 排行榜类图表显示多少条，改这里即可
 
+/* ---------- 筛选状态：顶部 chips 改的就是这一个对象 ---------- */
+const STATE = { caliber: 'all', decade: 'all' };   // caliber: all/movie/tv；decade: all/1980s/2010s/2020s
+
+/* 按当前筛选取一份数据。cross 的键是「口径|年代」，例如 "movie|2010s"。 */
+function pick() {
+  const f = D.filters;
+  if (!f || !f.cross) {                              // 老版 data.js 没有 filters 时兜底
+    return { genreTop: D.genreTop, countryTop: D.countryTop, topMovies: D.topMovies, n: D.kpi.works };
+  }
+  const cell = f.cross[STATE.caliber + '|' + STATE.decade] || {};
+  return {
+    genreTop: cell.genreTop || [],
+    countryTop: cell.countryTop || [],
+    topMovies: cell.topMovies || [],
+    n: cell.n || 0
+  };
+}
+
+/* 哪些图会跟着筛选变 —— main.js 里点完 chips 调一次这个函数就够了 */
+function refreshFiltered() {
+  buildGenre();
+  buildDecade();
+  buildCountry();
+  buildRankTable();
+}
+
 /* ---------- 图 1：类型 TOP10（横向柱状图） ---------- */
 function buildGenre() {
-  const rows = D.genreTop.slice(0, TOP).reverse();   // reverse：让第一名显示在最上面
+  const rows = pick().genreTop.slice(0, TOP).reverse();   // reverse：让第一名显示在最上面
   draw('chartGenre', {
     ...FONT,
     tooltip: { ...TIP, trigger: 'axis', axisPointer: { type: 'shadow' } },
@@ -82,13 +110,16 @@ function buildGenre() {
 }
 
 /* ---------- 图 2：年代分布（柱=作品数，线=平均分，双 Y 轴） ---------- */
+/* 只受「口径」影响：按年代筛年代分布没有意义，所以这里不看 STATE.decade。 */
 function buildDecade() {
+  const f = D.filters;
+  const dec = (f && f.byCaliber && f.byCaliber[STATE.caliber] && f.byCaliber[STATE.caliber].decade) || D.decade;
   draw('chartDecade', {
     ...FONT,
     tooltip: { ...TIP, trigger: 'axis' },
     legend: { data: ['作品数', '平均分'], textStyle: { color: FX.dim, fontSize: 11 }, right: 0, top: 0 },
     grid: { left: 40, right: 42, top: 26, bottom: 24 },   // bottom 要留够，不然 X 轴文字被切掉
-    xAxis: { type: 'category', data: D.decade.labels, ...AXIS, splitLine: { show: false } },
+    xAxis: { type: 'category', data: dec.labels, ...AXIS, splitLine: { show: false } },
     // 左轴：作品数量
     yAxis: [
       { type: 'value', ...AXIS, name: '部', nameTextStyle: { color: FX.dim, fontSize: 10 } },
@@ -96,9 +127,9 @@ function buildDecade() {
       { type: 'value', ...AXIS, min: 6, max: 10, splitLine: { show: false } }
     ],
     series: [
-      { name: '作品数', type: 'bar', data: D.decade.counts, barWidth: 16,
+      { name: '作品数', type: 'bar', data: dec.counts, barWidth: 16,
         itemStyle: { color: 'rgba(63,123,255,.55)', borderRadius: [4, 4, 0, 0] } },
-      { name: '平均分', type: 'line', yAxisIndex: 1, data: D.decade.avg, smooth: true,
+      { name: '平均分', type: 'line', yAxisIndex: 1, data: dec.avg, smooth: true,
         symbolSize: 6, lineStyle: { color: FX.gold, width: 2 }, itemStyle: { color: FX.gold } }
     ]
   });
@@ -117,8 +148,13 @@ function buildStar() {
       center: ['50%', '45%'],
       data: D.starDist,
       label: { color: '#e8f4ff', fontSize: 11, formatter: '{b}\n{d}%' },
-      labelLine: { length: 6, length2: 6 },
-      labelLayout: { hideOverlap: true }        // 小扇区的文字重叠时自动隐藏
+      labelLine: { length: 8, length2: 8, smooth: true },
+      // 关键：扇区角度小于 6° 的不画标签。
+      // 1星/2星/未评分 只占 0.6%~1.7%，硬画标签必然和邻居叠在一起；
+      // 它们的数量在下方图例和鼠标提示里都能看到，不会丢信息。
+      minShowLabelAngle: 6,
+      avoidLabelOverlap: true,
+      labelLayout: { hideOverlap: true }
     }]
   });
 }
@@ -176,7 +212,7 @@ function buildScatter() {
 
 /* ---------- 图 6：制片国家 / 地区 TOP10 ---------- */
 function buildCountry() {
-  const rows = D.countryTop.slice(0, TOP).reverse();
+  const rows = pick().countryTop.slice(0, TOP).reverse();
   draw('chartCountry', {
     ...FONT,
     tooltip: { ...TIP, trigger: 'axis', axisPointer: { type: 'shadow' } },
@@ -195,26 +231,31 @@ function buildCountry() {
   });
 }
 
-/* ---------- 图 7：高分榜 TOP10（横向柱，长度=评分） ---------- */
-function buildTop() {
-  const rows = D.topMovies.slice().reverse();        // 分数最低的在最下面
-  draw('chartTop', {
-    ...FONT,
-    tooltip: {
-      ...TIP, trigger: 'axis',
-      formatter: p => { const m = rows[p[0].dataIndex]; return m.name + '（' + m.year + '）<br/>评分 ' + m.rating + ' ／ ' + m.votes.toLocaleString() + ' 人评价<br/>' + m.genres; }
-    },
-    grid: { left: 118, right: 46, top: 8, bottom: 4 },
-    // 横轴从 8.8 开始，否则所有柱子都一样长、看不出差距
-    xAxis: { type: 'value', min: 8.8, max: 10, ...AXIS, axisLabel: { show: false }, splitLine: { show: false } },
-    yAxis: { type: 'category', data: rows.map(r => r.name), ...AXIS, splitLine: { show: false },
-             axisLabel: { color: FX.dim, fontSize: 11, width: 108, overflow: 'truncate' } },
-    series: [{
-      type: 'bar', data: rows.map(r => r.rating), barWidth: 11,
-      itemStyle: { borderRadius: 6, color: FX.gold, shadowBlur: 8, shadowColor: 'rgba(255,196,77,.5)' },
-      label: { show: true, position: 'right', color: FX.gold, fontSize: 11 }
-    }]
-  });
+/* ---------- 图 7：高分榜 TOP10（排名表，不是 ECharts 图） ---------- */
+/* 参考 awwwards 上 Field Rank 的榜单排版：大号名次 + 片名 + 右对齐的小数字。
+   表格用 HTML 画（比 canvas 里的文字更清晰、也能用鼠标选中），
+   所以这里不调用 draw()，而是把 HTML 填进 index.html 的 #rankTop。 */
+function buildRankTable() {
+  const box = document.getElementById('rankTop');
+  if (!box) return;
+  const rows = pick().topMovies;
+
+  if (!rows.length) {                       // 某些筛选组合（如"剧集 + 1980s"）可能没有作品
+    box.innerHTML = '<div class="rank-empty">该筛选下没有作品</div>';
+    return;
+  }
+
+  box.innerHTML = rows.map(function (m, i) {
+    const no = i + 1 < 10 ? '0' + (i + 1) : String(i + 1);
+    const votes = m.votes >= 10000 ? (m.votes / 10000).toFixed(1) + '万' : m.votes.toLocaleString();
+    return '<div class="rank-row" title="' + (m.year || '') + ' · ' + (m.genres || '') + '">' +
+      '<span class="rk">' + no + '</span>' +
+      '<span class="rk-name">' + m.name + '</span>' +
+      '<span class="rk-year">' + (m.year || '') + '</span>' +
+      '<span class="rk-score">' + m.rating.toFixed(1) + '</span>' +
+      '<span class="rk-votes">' + votes + '</span>' +
+      '</div>';
+  }).join('');
 }
 
 /* ---------- 图 8：短评高频词（词云，需要 echarts-wordcloud 插件） ---------- */
@@ -263,7 +304,7 @@ function initAllCharts() {
   buildMap();
   buildScatter();
   buildCountry();
-  buildTop();
+  buildRankTable();
   buildWord();
   buildYear();
 }
