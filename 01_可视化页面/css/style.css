@@ -29,10 +29,20 @@
   --hot: #ff6b4a;
   --hot-soft: rgba(255, 107, 74, .16);
 
-  /* ---- 字体：衬线为主，黑体只用于小标签 ----
-     想换成别的衬线：把 --font-serif 换成 "Noto Serif SC" 等即可 */
-  --font-serif: "SimSun", "Songti SC", "Noto Serif SC", "Source Han Serif SC", serif;
-  --font-sans: "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif;
+  /* ---- 字体：思源黑体为主，标题才用衬线 ----
+     2026-10-20 换字体：原来全站宋体（SimSun）在近黑底上笔画发虚、中文小字糊成一片，
+     现在改为「思源黑体（Noto Sans SC）打底、标题用思源宋体（Noto Serif SC）」。
+     这两个都是本机 C:\Windows\Fonts 里已有的可变字体，离线也能用；没装的系统会退到
+     微软雅黑 / 苹方，仍然是黑体观感。 */
+  --font-serif: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "SimSun", serif;
+  --font-sans: "Noto Sans SC", "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif;
+
+  /* ---- 字号基准 ----
+     全站小字从 9~10px 整体抬到 11~12px：1920 画布投到 1080 屏是 1:1，
+     9px 在普通显示器上已经接近不可读。改这两个变量能整体缩放，但个别地方
+     还是写死了 px，想彻底放大请用浏览器的 Ctrl + 滚轮（页面会等比缩放）。 */
+  --fs-mini: 11px;    /* 极小的编号、单位、页脚 */
+  --fs-cap: 12px;     /* 说明性小标签 */
 
   --gap: 12px;
   --radius: 2px;
@@ -44,7 +54,7 @@ html, body {
   width: 100%; height: 100%; overflow: hidden;
   background: var(--bg);
   color: var(--text);
-  font-family: var(--font-serif);
+  font-family: var(--font-sans);   /* 2026-10-20：打底字体由宋体改为思源黑体 */
   -webkit-font-smoothing: antialiased;
 }
 
@@ -68,14 +78,14 @@ html, body {
 }
 .brand { display: flex; flex-direction: column; gap: 6px; margin-right: 46px; }
 .brand h1 {
-  font-family: var(--font-serif);
-  font-size: 24px; font-weight: 700; letter-spacing: 1px;
-  /* 宋体在屏幕上笔画偏细，用描边补一点粗，小字必须关掉（见下面 .brand-sub） */
-  -webkit-text-stroke: .3px currentColor;
+  font-family: var(--font-serif);    /* 全站唯二用宋体的地方：品牌名与卡片标题 */
+  font-size: 25px; font-weight: 700; letter-spacing: 1px;
+  /* 思源宋体有完整的字重，不再需要描边补粗；留 0 更干净 */
+  -webkit-text-stroke: 0;
 }
 .brand-sub {
   font-family: var(--font-sans);
-  font-size: 9.5px; letter-spacing: 2.6px; color: var(--text-mute);
+  font-size: 11px; letter-spacing: 2.6px; color: var(--text-mute);
   text-transform: uppercase;
   -webkit-text-stroke: 0;             /* ★ 小字号必须关掉描边，否则糊成一团 */
 }
@@ -90,7 +100,7 @@ html, body {
 }
 .nav-item .num {
   font-family: var(--font-sans);
-  font-size: 9px; letter-spacing: 1.8px; color: var(--text-mute);
+  font-size: 10.5px; letter-spacing: 1.8px; color: var(--text-mute);
   -webkit-text-stroke: 0;
 }
 .nav-item .txt {
@@ -108,7 +118,7 @@ html, body {
 }
 .filter-handle {
   font-family: var(--font-sans);
-  font-size: 9.5px; letter-spacing: 2px; color: var(--text-mute);
+  font-size: 11px; letter-spacing: 2px; color: var(--text-mute);
   border: 1px solid var(--line-strong); border-radius: 2px;
   padding: 5px 10px; cursor: pointer; white-space: nowrap;
   -webkit-text-stroke: 0;
@@ -124,12 +134,12 @@ html, body {
 .filter-dock:hover .filter-panel { display: flex; }
 .chip-group { display: flex; align-items: center; gap: 5px; }
 .chip-group .cap {
-  font-family: var(--font-sans); font-size: 9px; letter-spacing: 1.6px;
+  font-family: var(--font-sans); font-size: 11px; letter-spacing: 1.6px;
   color: var(--text-mute); margin-right: 2px; -webkit-text-stroke: 0;
 }
 .chip {
-  font-family: var(--font-sans); font-size: 11.5px; line-height: 1;
-  padding: 6px 10px; border-radius: 2px;
+  font-family: var(--font-sans); font-size: 12.5px; line-height: 1;
+  padding: 6px 11px; border-radius: 2px;
   border: 1px solid var(--line-strong); background: transparent; color: var(--text-dim);
   cursor: pointer; transition: all .15s;
 }
@@ -171,18 +181,18 @@ html, body {
 .card > h3 {
   flex: none;
   display: flex; align-items: baseline; gap: 10px;
-  font-size: 13.5px; font-weight: 700; color: var(--text); letter-spacing: .6px;
+  font-size: 15px; font-weight: 700; color: var(--text); letter-spacing: .6px;
   padding-bottom: 8px; margin-bottom: 8px;
   border-bottom: 1px solid var(--line);
   -webkit-text-stroke: .3px currentColor;
 }
 .card > h3 .idx {
-  font-family: var(--font-sans); font-size: 10px; font-weight: 400;
+  font-family: var(--font-sans); font-size: 11.5px; font-weight: 400;
   color: var(--text-mute); letter-spacing: 1px; -webkit-text-stroke: 0;
 }
 .card > h3 .meta {
   margin-left: auto;
-  font-family: var(--font-sans); font-size: 9.5px; letter-spacing: .3px;
+  font-family: var(--font-sans); font-size: 11px; letter-spacing: .3px;
   color: var(--text-mute); -webkit-text-stroke: 0;
 }
 /* 图表容器自动撑满卡片剩余空间 */
@@ -203,7 +213,7 @@ html, body {
   -webkit-text-stroke: .5px currentColor;
 }
 .scale .num-block .l {
-  font-family: var(--font-sans); font-size: 9.5px; letter-spacing: 2px;
+  font-family: var(--font-sans); font-size: 11.5px; letter-spacing: 2px;
   color: var(--text-mute); text-transform: uppercase; -webkit-text-stroke: 0;
 }
 /* 1052 个方块：一行 40 个，26 行多一点，正好铺成一条 */
@@ -238,12 +248,12 @@ html, body {
 }
 .finding .txt { display: flex; flex-direction: column; gap: 9px; }
 .finding .txt .big {
-  font-size: 21px; line-height: 1.45; letter-spacing: .4px;
-  -webkit-text-stroke: .3px currentColor;
+  font-size: 22px; line-height: 1.45; letter-spacing: .4px;
+  -webkit-text-stroke: 0;
 }
 .finding .txt .big em { font-style: normal; color: var(--hot); }
 .finding .txt .sub {
-  font-family: var(--font-sans); font-size: 11px; line-height: 1.7; color: var(--text-dim);
+  font-family: var(--font-sans); font-size: 12.5px; line-height: 1.7; color: var(--text-dim);
 }
 
 /* 三条核心结论 */
@@ -254,11 +264,11 @@ html, body {
 }
 .note-row:last-child { border-bottom: none; }
 .note-row .k {
-  font-family: var(--font-sans); font-size: 10px; letter-spacing: 1.4px;
-  color: var(--text-mute); width: 66px; flex: none; -webkit-text-stroke: 0;
+  font-family: var(--font-sans); font-size: 12px; letter-spacing: 1.4px;
+  color: var(--text-mute); width: 72px; flex: none; -webkit-text-stroke: 0;
 }
-.note-row .v { font-size: 15px; color: var(--text); letter-spacing: .3px; }
-.note-row .v b { color: var(--hot); font-weight: 700; font-size: 17px; }
+.note-row .v { font-size: 16px; color: var(--text); letter-spacing: .3px; }
+.note-row .v b { color: var(--hot); font-weight: 700; font-size: 18px; }
 
 /* ======================= ② 类型与年代 ======================= */
 .grid-3 {
@@ -286,14 +296,14 @@ html, body {
 .cl-row {
   display: flex; align-items: center; gap: 8px; height: 26px;
   border-bottom: 1px solid rgba(255, 255, 255, .045);
-  font-size: 12.5px;
+  font-size: 13.5px;
 }
 .cl-row .nm { flex: 1; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cl-row .bar { height: 4px; background: rgba(255, 255, 255, .14); flex: none; }
 .cl-row .bar.hot { background: var(--hot); }
 .cl-row .n {
-  font-family: var(--font-sans); font-size: 11px; color: var(--text-mute);
-  width: 34px; text-align: right; flex: none; -webkit-text-stroke: 0;
+  font-family: var(--font-sans); font-size: 12px; color: var(--text-mute);
+  width: 38px; text-align: right; flex: none; -webkit-text-stroke: 0;
 }
 
 /* ======================= ④ 短评 ======================= */
@@ -303,21 +313,36 @@ html, body {
 }
 .comment-right { display: grid; grid-template-rows: 1fr 1fr; gap: var(--gap); min-height: 0; }
 
-/* 真实短评摘录 */
+/* ★ 布局策略：星星「只负责上色」，序号「只负责尺寸」。
+   .sample 是按行等高的 flex，每一行高度不一样，如果让星级那一格带着
+   五颗 ★ 一起 flex:1，★ 就会撑高整行、把正文挤到右下角（之前就是这样）。
+   现在两层：外层 .st 宽度固定、不参与高度撑开；里面的 .st-line 用
+   font-size:0 把纯文本节点「★★★★★」的高度归零，只剩一个 <i> 决定高度。 */
 .samples { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
 .sample {
   flex: 1; min-height: 0; display: flex; gap: 12px; align-items: center;
-  padding: 6px 0; border-bottom: 1px solid rgba(255, 255, 255, .05);
+  padding: 8px 0; border-bottom: 1px solid rgba(255, 255, 255, .05);
 }
 .sample:last-child { border-bottom: none; }
 .sample .st {
-  font-family: var(--font-sans); font-size: 9.5px; letter-spacing: 1px;
-  color: var(--text-mute); width: 40px; flex: none; padding-top: 3px;
+  font-family: var(--font-sans); font-size: 12px; letter-spacing: 1px;
+  color: var(--text-mute); width: 58px; flex: none;
+  align-self: center;
   -webkit-text-stroke: 0;
 }
-.sample .st.hi { color: var(--hot); }
+.sample .st-line { display: block; font-size: 0; line-height: 0; }   /* 抹掉 ★ 文本节点的高度 */
+.sample .st-line i {
+  font-style: normal; font-size: 12px; line-height: 1.3; letter-spacing: 1px;
+  color: var(--text-mute);
+}
+.sample .st-line i.hi { color: var(--hot); }
+.sample .st-no {
+  display: block; margin-top: 2px;
+  font-size: 11px; line-height: 1.3; color: var(--text-mute);
+}
+/* 行高 1.8 + 两行截断：三张卡片高度一致，长评论不会把卡片撑破 */
 .sample .tx {
-  flex: 1; font-size: 12.5px; line-height: 1.62; color: var(--text-dim);
+  flex: 1; font-size: 13.5px; line-height: 1.8; color: var(--text-dim);
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
 .sample .tx b { color: var(--text); font-weight: 400; }
@@ -328,22 +353,23 @@ html, body {
   display: grid; grid-template-columns: 1.15fr 1fr 1fr; gap: var(--gap);
 }
 .model-verdict {
-  flex: none; padding-bottom: 8px;
-  font-size: 13px; line-height: 1.7; color: var(--text-dim);
+  flex: none; padding-bottom: 12px; margin-bottom: 12px;
+  border-bottom: 1px solid var(--line);   /* 和下面的图之间拉一条线，避免文字悬在半空 */
+  font-size: 13.5px; line-height: 1.75; color: var(--text-dim);
 }
-.model-verdict b { color: var(--hot); font-weight: 700; font-size: 15px; }
+.model-verdict b { color: var(--hot); font-weight: 700; font-size: 16px; }
 /* 三块内容（好评词 / 差评词 / 读法）各占 1/3 高度、顶部对齐，
    不再用 space-around —— 那样词条会散在整列里，中间留两大片空白。 */
 .words-duo { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 16px; justify-content: flex-start; }
 .words-col { flex: none; display: flex; flex-direction: column; gap: 7px; }
 .words-col:last-child { margin-top: auto; padding-top: 10px; border-top: 1px solid var(--line); }
 .words-col .cap {
-  font-family: var(--font-sans); font-size: 9.5px; letter-spacing: 1.6px;
+  font-family: var(--font-sans); font-size: 11.5px; letter-spacing: 1.6px;
   color: var(--text-mute); -webkit-text-stroke: 0;
 }
 .words-col .ws { display: flex; flex-wrap: wrap; gap: 6px; align-content: flex-start; }
 .wtag {
-  font-size: 13px; padding: 4px 9px; border-radius: 2px;
+  font-size: 14px; padding: 5px 10px; border-radius: 2px;
   border: 1px solid var(--line-strong); color: var(--text-dim);
 }
 .wtag.pos { color: var(--hot); border-color: rgba(255, 107, 74, .45); }
@@ -360,24 +386,24 @@ html, body {
 }
 .rk-row {
   display: grid;
-  grid-template-columns: 26px minmax(0, 1fr) 44px 38px 66px;
+  grid-template-columns: 28px minmax(0, 1fr) 50px 40px 74px;
   align-items: center; column-gap: 9px;
   border-bottom: 1px solid rgba(255, 255, 255, .045);
   padding: 0 3px;
 }
 .rk-row:last-child { border-bottom: none; }
 .rk-row:hover { background: rgba(255, 255, 255, .035); }
-.rk-row .rk { font-family: var(--font-sans); font-size: 10px; color: var(--text-mute); -webkit-text-stroke: 0; }
-.rk-row .nm { font-size: 12.5px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rk-row .yr { font-family: var(--font-sans); font-size: 10px; color: var(--text-mute); text-align: right; -webkit-text-stroke: 0; }
-.rk-row .sc { font-size: 13.5px; font-weight: 700; color: var(--hot); text-align: right; -webkit-text-stroke: .3px currentColor; }
-.rk-row .vt { font-family: var(--font-sans); font-size: 10px; color: var(--text-dim); text-align: right; -webkit-text-stroke: 0; }
+.rk-row .rk { font-family: var(--font-sans); font-size: 11.5px; color: var(--text-mute); -webkit-text-stroke: 0; }
+.rk-row .nm { font-size: 14px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rk-row .yr { font-family: var(--font-sans); font-size: 11.5px; color: var(--text-mute); text-align: right; -webkit-text-stroke: 0; }
+.rk-row .sc { font-size: 15px; font-weight: 700; color: var(--hot); text-align: right; -webkit-text-stroke: 0; }
+.rk-row .vt { font-family: var(--font-sans); font-size: 11.5px; color: var(--text-dim); text-align: right; -webkit-text-stroke: 0; }
 
 /* ======================= 底栏 ======================= */
 footer {
-  flex: none; height: 22px;
+  flex: none; height: 24px;
   font-family: var(--font-sans);
-  font-size: 9.5px; letter-spacing: 1.2px; color: var(--text-mute);
+  font-size: 11px; letter-spacing: 1.2px; color: var(--text-mute);
   display: flex; align-items: center; justify-content: space-between;
   border-top: 1px solid var(--line);
   -webkit-text-stroke: 0;

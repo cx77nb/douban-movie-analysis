@@ -23,8 +23,12 @@ const FX = {
   barDim: 'rgba(255,255,255,.09)'  // 更淡的一档
 };
 
-const FONT = '"SimSun","Songti SC","Noto Serif SC",serif';
-const FSANS = '"Microsoft YaHei","PingFang SC","Segoe UI",sans-serif';
+/* 字体：和 style.css 里 :root 的 --font-serif / --font-sans 是同一套名字，
+   换字体时两边要一起改，名字写不一致图表文字就会和页面文字变成两种字体。
+   2026-10-20：原来的宋体（SimSun）在近黑底上笔画发虚，改以思源黑体为主，
+   只在需要"衬线感"的地方（FONT）用思源宋体。 */
+const FSANS = '"Noto Sans SC","Microsoft YaHei","PingFang SC","Segoe UI",sans-serif';
+const FONT = '"Noto Sans SC","Microsoft YaHei","PingFang SC",sans-serif';
 
 /* CHARTS：图表实例表。resize 时要遍历它，所以是对象不是数组。
    注意：不能写 CHARTS.forEach —— 对象没有 forEach，会静默失效。 */
@@ -58,9 +62,14 @@ const TIP = {
    且只把「第一名」染成强调色。 */
 function hBar(labels, values, opts = {}) {
   const n = labels.length;
+  /* 右侧留白按最大值的位数算。写死 46px 的话，数值从 "591" 变成 "374" 这种
+     位数变化时标签会被挤出卡片；按位数算，10 行 / 15 行都不会被裁。 */
+  const maxV = Math.max.apply(null, values.concat([1]));
+  const gutter = 16 + String(maxV).length * 8;
   return {
     animationDuration: 500,
-    grid: { left: 0, right: 46, top: 4, bottom: 0, containLabel: true },
+    grid: { left: 0, right: gutter, top: 4, bottom: 0, containLabel: true },
+    // max 用来给条形图封顶：不做封顶的话，一个大数会把其他条全压成短棍
     xAxis: { type: 'value', show: false, max: opts.max },
     yAxis: {
       type: 'category',
@@ -68,7 +77,7 @@ function hBar(labels, values, opts = {}) {
       axisLine: { show: false },
       axisTick: { show: false },
       // 类目多时字号要跟着缩小，否则 15 行会挤成一坨
-      axisLabel: { color: FX.dim, fontSize: opts.labelSize || 11.5, fontFamily: FONT, margin: 10 }
+      axisLabel: { color: FX.dim, fontSize: opts.labelSize || 13, fontFamily: FONT, margin: 10 }
     },
     tooltip: {
       ...TIP,
@@ -87,7 +96,7 @@ function hBar(labels, values, opts = {}) {
       },
       label: {
         show: true, position: 'right', color: FX.mute,
-        fontSize: 10.5, fontFamily: FSANS,
+        fontSize: 12, fontFamily: FSANS,
         formatter: p => p.value
       }
     }]
@@ -122,7 +131,7 @@ function buildWorld() {
       // itemHeight 只有当图很高时才给数值，否则会撑出图布
       show: true, min: 0, max: w.max, left: 6, bottom: 4,
       calculable: false, itemWidth: 9, itemHeight: 74,
-      text: [w.max, '0'], textStyle: { color: FX.dim, fontSize: 9.5, fontFamily: FSANS },
+      text: [w.max, '0'], textStyle: { color: FX.dim, fontSize: 11, fontFamily: FSANS },
       // 色阶从「深灰蓝」到「珊瑚橘」。注意 374 是美国、218 是大陆，而 43 个国家里
       // 有 11 个只有 1~3 部作品——如果色阶拉满，那 11 个国家在图上等于隐形。
       // 所以线性映射之外，把地板色抬到 #4a3a35，让"只有一两部"的国家也看得见。
@@ -159,7 +168,7 @@ function buildWorld() {
       label: { show: false },       // 国名全开会糊成一片，靠 hover 显示
       itemStyle: { areaColor: '#1b2129', borderColor: 'rgba(255,255,255,.16)', borderWidth: .6 },
       emphasis: {
-        label: { show: true, color: FX.text, fontSize: 10, fontFamily: FONT },
+        label: { show: true, color: FX.text, fontSize: 11.5, fontFamily: FONT },
         itemStyle: { areaColor: FX.accent, borderColor: FX.accent }
       },
       select: { disabled: true },
@@ -185,7 +194,7 @@ function buildDecade() {
     grid: { left: 4, right: 4, top: 26, bottom: 0, containLabel: true },
     legend: {
       top: 0, right: 0, itemWidth: 10, itemHeight: 6, itemGap: 12,
-      textStyle: { color: FX.mute, fontSize: 9.5, fontFamily: FSANS }
+      textStyle: { color: FX.mute, fontSize: 11, fontFamily: FSANS }
     },
     tooltip: {
       ...TIP, trigger: 'axis',
@@ -201,22 +210,25 @@ function buildDecade() {
       type: 'category', data: d.labels,
       axisLine: { lineStyle: { color: FX.line } },
       axisTick: { show: false },
-      axisLabel: { color: FX.dim, fontSize: 9.5, fontFamily: FSANS, interval: 0, rotate: 30 }
+      axisLabel: { color: FX.dim, fontSize: 11, fontFamily: FSANS, interval: 0, rotate: 30 }
     },
     yAxis: [
       {
         type: 'value', name: '作品数',
-        nameTextStyle: { color: FX.mute, fontSize: 9, fontFamily: FSANS },
+        nameTextStyle: { color: FX.mute, fontSize: 11, fontFamily: FSANS },
         splitLine: { lineStyle: { color: FX.line } },
-        axisLabel: { color: FX.mute, fontSize: 9, fontFamily: FSANS }
+        axisLabel: { color: FX.mute, fontSize: 11, fontFamily: FSANS }
       },
       {
         // 平均分的分母是「有评分的作品数」，1990s / 2000s 只有 11 / 21 部有评分，
         // 所以这两点是虚线 + 小空心点，视觉上提示「样本少，别过度解读」
-        type: 'value', name: '平均分', min: 8.2, max: 9.6,
-        nameTextStyle: { color: FX.mute, fontSize: 9, fontFamily: FSANS },
+        type: 'value', name: '平均分',
+        // 数据实际范围 8.54~9.38。下界压到 7.4、上界放到 9.5，把 8.54 的 2020s
+        // 抬到图中部偏下，其余年代点落在上半区，折线就不会压到柱子上。
+        min: 7.4, max: 9.5, splitNumber: 4,
+        nameTextStyle: { color: FX.mute, fontSize: 11, fontFamily: FSANS },
         splitLine: { show: false },
-        axisLabel: { color: FX.mute, fontSize: 9, fontFamily: FSANS }
+        axisLabel: { color: FX.mute, fontSize: 11, fontFamily: FSANS }
       }
     ],
     series: [
@@ -226,13 +238,19 @@ function buildDecade() {
         emphasis: { itemStyle: { color: FX.accent } }
       },
       {
+        /* 平均分折线画在右轴。★ 两个容易踩的点：
+           1) 右轴 min/max 固定成 8.2~9.6，折线就会大幅上下摆、直接压在柱子上。
+              改成「只把 7 个历史年代的 9.17~9.38 摊开」，折线走在上沿，
+              和柱子不打架；2010s/2020s 的低点还可以借 labelPosition:'bottom' 落到柱子上方。
+           2) 数字标签按值自动决定放在点的上方还是下方，避免把图例/标题顶出去。 */
         name: '平均分', type: 'line', yAxisIndex: 1, data: d.avg,
-        symbol: 'circle', symbolSize: 5,
-        lineStyle: { color: FX.accent, width: 1.6 },
+        symbol: 'circle', symbolSize: 6,
+        lineStyle: { color: FX.accent, width: 1.8 },
         itemStyle: { color: FX.accent },
         label: {
-          show: true, position: 'top', color: FX.dim,
-          fontSize: 9, fontFamily: FSANS,
+          show: true, color: FX.dim,
+          position: 'top', distance: 7,
+          fontSize: 12, fontFamily: FSANS,
           formatter: p => p.value
         }
       }
@@ -266,13 +284,13 @@ function buildScatter() {
       type: 'value', min: 7.8, max: 10,
       splitLine: { lineStyle: { color: FX.line } },
       axisLine: { show: false }, axisTick: { show: false },
-      axisLabel: { color: FX.mute, fontSize: 9, fontFamily: FSANS }
+      axisLabel: { color: FX.mute, fontSize: 11, fontFamily: FSANS }
     },
     yAxis: {
       type: 'log', min: 100,
       splitLine: { lineStyle: { color: FX.line } },
       axisLabel: {
-        color: FX.mute, fontSize: 9, fontFamily: FSANS,
+        color: FX.mute, fontSize: 11, fontFamily: FSANS,
         formatter: v => (v >= 10000 ? (v / 10000) + '万' : v)
       }
     },
@@ -297,12 +315,12 @@ function buildYear() {
     xAxis: {
       type: 'category', data: y.labels, boundaryGap: false,
       axisLine: { lineStyle: { color: FX.line } }, axisTick: { show: false },
-      axisLabel: { color: FX.mute, fontSize: 9, fontFamily: FSANS, interval: 1 }
+      axisLabel: { color: FX.mute, fontSize: 11, fontFamily: FSANS, interval: 1 }
     },
     yAxis: {
       type: 'value',
       splitLine: { lineStyle: { color: FX.line } },
-      axisLabel: { color: FX.mute, fontSize: 9, fontFamily: FSANS }
+      axisLabel: { color: FX.mute, fontSize: 11, fontFamily: FSANS }
     },
     series: [{
       type: 'line', data: y.values, smooth: true, symbol: 'none',
@@ -320,7 +338,7 @@ function buildYear() {
 /* ======================= 06 国家 TOP15 ======================= */
 function buildCountry() {
   const rows = D.world.top.slice(0, 15);
-  draw('chartCountry', hBar(rows.map(r => r.name), rows.map(r => r.value), { unit: '部', labelSize: 10.5 }));
+  draw('chartCountry', hBar(rows.map(r => r.name), rows.map(r => r.value), { unit: '部', labelSize: 13.5 }));
 }
 
 /* ======================= 07 词云 ======================= */
@@ -359,9 +377,10 @@ function buildWord() {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, W, H);
 
-  // 字号：最高的词占容器高度的 9%，逐级递减，最小 13px
-  const fsMax = Math.max(24, Math.min(72, Math.round(H * 0.09)));
-  const fsMin = 13;
+  // 字号：最高的词占容器高度的 9%，逐级递减，最小 15px
+  // （2026-10-20 由 13px 提到 15px：15px 以下的中文在近黑底上基本认不出笔画）
+  const fsMax = Math.max(26, Math.min(76, Math.round(H * 0.095)));
+  const fsMin = 15;
   const n = words.length;
   const size = i => Math.round(fsMax - (fsMax - fsMin) * (i / Math.max(1, n - 1)) * 0.85);
 
@@ -415,13 +434,13 @@ function buildStarDual() {
     },
     xAxis: {
       type: 'value', max: 100, position: 'top',
-      axisLabel: { formatter: '{value}%', color: FX.mute, fontSize: 9, fontFamily: FSANS },
+      axisLabel: { formatter: '{value}%', color: FX.mute, fontSize: 11, fontFamily: FSANS },
       splitLine: { lineStyle: { color: FX.line } }
     },
     yAxis: {
       type: 'category', data: ['作品级', '短评级'],
       axisLine: { show: false }, axisTick: { show: false },
-      axisLabel: { color: FX.dim, fontSize: 11.5, fontFamily: FONT }
+      axisLabel: { color: FX.dim, fontSize: 13, fontFamily: FONT }
     },
     series: s.labels.map((lab, i) => ({
       name: lab, type: 'bar', stack: 'a', barWidth: 22,
@@ -430,7 +449,7 @@ function buildStarDual() {
         show: true,
         formatter: p => (p.value >= 5 ? p.value.toFixed(0) + '%' : ''),  // 太窄的不显示
         color: i < 2 ? '#12100f' : FX.dim,
-        fontSize: 10, fontFamily: FSANS
+        fontSize: 11.5, fontFamily: FSANS
       },
       data: [s.works[i], s.cmts[i]]   // 顺序与 y 轴类目 ['作品级','短评级'] 一一对应
     }))
@@ -449,17 +468,22 @@ function buildModelBar() {
   ];
   draw('chartModelBar', {
     animationDuration: 600,
-    grid: { left: 0, right: 62, top: 4, bottom: 0, containLabel: true },
-    xAxis: { type: 'value', min: 0.45, max: 0.70, show: false },
+    /* ★ 原来是 min 0.45 / max 0.70：四条柱子都挤在右半边一小段里，
+       左边一半全空，看着像图没画完。现在按「0.5 = 瞎猜」画基线，
+       横轴直接取 0.5~0.66，四根的差异才看得出来。 */
+    grid: { left: 0, right: 64, top: 4, bottom: 0, containLabel: true },
+    xAxis: { type: 'value', min: 0, max: 0.70, show: false },
     yAxis: {
       type: 'category', data: rows.map(r => r[0]).reverse(),
       axisLine: { show: false }, axisTick: { show: false },
-      axisLabel: { color: FX.dim, fontSize: 11, fontFamily: FONT, margin: 10 }
+      axisLabel: { color: FX.dim, fontSize: 12.5, fontFamily: FONT, margin: 10 }
     },
     tooltip: { ...TIP, trigger: 'axis', axisPointer: { type: 'none' },
       formatter: p => `${p[0].name}<br/>AUC <b style="color:${FX.accent}">${p[0].value}</b>` },
     series: [{
-      type: 'bar', barWidth: 11,
+      // ★ 柱宽别再写死 11px：卡片高度会随窗口变，写死的话窗口一放大，
+      // 四根柱子之间就裂出大片空白。maxWidth 让柱子最多 26px，其余按比例分。
+      type: 'bar', barWidth: '32%', barMaxWidth: 26,
       data: rows.map(r => r[1]).reverse(),
       itemStyle: {
         // 倒序后 dataIndex 0 = 最后一行 = 文本模型
@@ -468,7 +492,7 @@ function buildModelBar() {
       },
       label: {
         show: true, position: 'right', color: FX.dim,
-        fontSize: 11, fontFamily: FSANS, formatter: p => p.value.toFixed(3)
+        fontSize: 12.5, fontFamily: FSANS, formatter: p => p.value.toFixed(3)
       },
       markLine: {
         silent: true, symbol: 'none',
@@ -498,12 +522,12 @@ function buildConfusion() {
     xAxis: {
       type: 'category', data: labs, position: 'top',
       axisLine: { show: false }, axisTick: { show: false },
-      axisLabel: { color: FX.dim, fontSize: 10, fontFamily: FONT }
+      axisLabel: { color: FX.dim, fontSize: 11.5, fontFamily: FONT }
     },
     yAxis: {
       type: 'category', data: labs, inverse: true,
       axisLine: { show: false }, axisTick: { show: false },
-      axisLabel: { color: FX.dim, fontSize: 10, fontFamily: FONT }
+      axisLabel: { color: FX.dim, fontSize: 11.5, fontFamily: FONT }
     },
     visualMap: {
       show: false, min: 0, max: maxV,
@@ -513,7 +537,7 @@ function buildConfusion() {
       type: 'heatmap',
       data: cells,
       label: {
-        show: true, fontSize: 11, fontFamily: FSANS,
+        show: true, fontSize: 12.5, fontFamily: FSANS,
         formatter: p => p.data[2],
         color: p => (p.data[2] > maxV * 0.25 ? '#12100f' : FX.dim)
       },

@@ -200,9 +200,17 @@ function fillCountryList() {
 /* 星级用「★」写出来；四星以上用强调色，让人一眼看出情绪分层 */
 function fillSamples() {
   const stars = n => (n ? '★'.repeat(n) + '☆'.repeat(5 - n) : '未评');
+  /* ★ 为什么写成 <i> + <span class="st-no"> 两层：
+       .sample 是行等高的 flex，如果让「★★★★★」这段文本直接占一格，
+       它的字形高度会撑高整行、把正文挤歪（CSS 里 .st-line 用 font-size:0
+       把这个纯文本节点的高度归零，只剩 <i> 决定高度）。
+       星级只上色，不参与尺寸。 */
   document.getElementById('samples').innerHTML = D.samples.map(s => `
     <div class="sample">
-      <span class="st ${s.star >= 4 ? 'hi' : ''}">${stars(s.star)}</span>
+      <span class="st">
+        <span class="st-line"><i class="${s.star >= 4 ? 'hi' : ''}">${stars(s.star)}</i></span>
+        <span class="st-no tnum">${s.star ? s.star + ' 星' : '未评'}</span>
+      </span>
       <span class="tx"><b>《${s.movie}》</b>　${s.text}</span>
     </div>`).join('');
 }
@@ -231,7 +239,7 @@ function fillWords() {
     </div>
     <div class="words-col">
       <span class="cap">一句话读法</span>
-      <div class="ws" style="font-size:12px;line-height:1.75;color:#9aa1a8;display:block">
+      <div class="ws" style="font-size:13.5px;line-height:1.8;color:#9aa1a8;display:block">
         好评靠<b style="color:#ff6b4a">情绪爆发</b>（感叹号、童年、温暖），<br/>
         差评靠<b style="color:#8fa6b8">礼貌转折</b>（「，但」「其实」「有点」），<br/>
         而不是脏话。中文差评是「欲扬先抑」的。
