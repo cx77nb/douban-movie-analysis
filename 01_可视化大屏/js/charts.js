@@ -62,7 +62,7 @@ function draw(id, option) {
 }
 
 const D = window.DASH_DATA;              // 数据（来自 js/data.js）
-const TOP = 10;                          // 排行榜类图表显示多少条，改这里即可
+const TOP = 8;                          // 排行榜类图表显示多少条，改这里即可
 
 /* ---------- 筛选状态：顶部 chips 改的就是这一个对象 ---------- */
 const STATE = { caliber: 'all', decade: 'all' };   // caliber: all/movie/tv；decade: all/1980s/2010s/2020s
@@ -96,13 +96,14 @@ function buildGenre() {
   draw('chartGenre', {
     ...FONT,
     tooltip: { ...TIP, trigger: 'axis', axisPointer: { type: 'shadow' } },
-    grid: { left: 60, right: 40, top: 8, bottom: 4 },
+    grid: { left: 52, right: 38, top: 6, bottom: 2 },
     xAxis: { type: 'value', ...AXIS, axisLabel: { show: false }, splitLine: { show: false } },
-    yAxis: { type: 'category', data: rows.map(r => r.name), ...AXIS, splitLine: { show: false } },
+    yAxis: { type: 'category', data: rows.map(r => r.name), ...AXIS, splitLine: { show: false },
+             axisLabel: { color: FX.dim, fontSize: 9.5 } },
     series: [{
       type: 'bar',
       data: rows.map(r => r.value),
-      barWidth: 10,
+      barWidth: 9,
       // 只有第一名（reverse 后是最后一条）用铜金，其余全是中性灰 —— "只亮重点"
       itemStyle: {
         borderRadius: 1,
@@ -142,10 +143,33 @@ function buildDecade() {
   });
 }
 
+/* 环形图中心的大数字：5 星占比。用 ECharts 的 graphic 悬浮在圆环中间，
+   这样不用改 HTML，也不会被 tooltip 挡住。 */
+function donutCenter() {
+  const five = D.starDist.find(function (d) { return d.name === '5星'; });
+  const total = D.starDist.reduce(function (a, b) { return a + b.value; }, 0);
+  const pct = five && total ? Math.round(five.value / total * 100) : 0;
+  return [{
+    type: 'text', left: 'center', top: '41%',
+    style: {
+      text: pct + '%', fill: FX.accent, fontSize: 30, fontWeight: 700,
+      fontFamily: 'SimSun, serif', textAlign: 'center'
+    }
+  }, {
+    /* 小字标签放在**大数字上方**：圆环的内圆高度有限，放在下方会被内圈盖住 */
+    type: 'text', left: 'center', top: '31%',
+    style: {
+      text: '五星占比', fill: FX.dim, fontSize: 9.5,
+      fontFamily: 'Microsoft YaHei, sans-serif', letterSpacing: 1.5, textAlign: 'center'
+    }
+  }];
+}
+
 /* ---------- 图 3：短评星级构成（环形图） ---------- */
 function buildStar() {
   draw('chartStar', {
     ...FONT,
+    graphic: donutCenter(),
     tooltip: { ...TIP, trigger: 'item', formatter: '{b}：{c} 条（{d}%）' },
     legend: { bottom: 0, textStyle: { color: FX.dim, fontSize: 10 }, itemWidth: 8, itemHeight: 8, itemGap: 14 },
     // 单色阶：5 星最亮（铜金），星级越低越暗，"未评分"用中性灰
@@ -156,12 +180,12 @@ function buildStar() {
       center: ['50%', '44%'],
       data: D.starDist,
       itemStyle: { borderColor: '#0e1114', borderWidth: 2 },   // 扇区之间留一条底色缝，更精致
-      label: { color: FX.text, fontSize: 10.5, formatter: '{b} {d}%' },
+      label: { color: FX.text, fontSize: 10, formatter: p => p.name + ' ' + p.percent.toFixed(0) + '%' },
       labelLine: { length: 10, length2: 8, smooth: true, lineStyle: { color: 'rgba(255,255,255,.18)' } },
       // 关键：扇区角度小于 6° 的不画标签。
       // 1星/2星/未评分 只占 0.6%~1.7%，硬画标签必然和邻居叠在一起；
       // 它们的数量在下方图例和鼠标提示里都能看到，不会丢信息。
-      minShowLabelAngle: 6,
+      minShowLabelAngle: 12,
       avoidLabelOverlap: true,
       labelLayout: { hideOverlap: true }
     }]
@@ -231,9 +255,10 @@ function buildCountry() {
   draw('chartCountry', {
     ...FONT,
     tooltip: { ...TIP, trigger: 'axis', axisPointer: { type: 'shadow' } },
-    grid: { left: 74, right: 40, top: 8, bottom: 4 },
+    grid: { left: 72, right: 38, top: 6, bottom: 2 },
     xAxis: { type: 'value', ...AXIS, axisLabel: { show: false }, splitLine: { show: false } },
-    yAxis: { type: 'category', data: rows.map(r => r.name), ...AXIS, splitLine: { show: false } },
+    yAxis: { type: 'category', data: rows.map(r => r.name), ...AXIS, splitLine: { show: false },
+             axisLabel: { color: FX.dim, fontSize: 9.5 } },
     series: [{
       type: 'bar', data: rows.map(r => r.value), barWidth: 10,
       // 同样只高亮第一名

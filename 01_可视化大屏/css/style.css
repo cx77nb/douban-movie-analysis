@@ -1,12 +1,13 @@
 /* ==========================================================================
    style.css —— 大屏的「外观」：配色、排版、栅格、细线
    --------------------------------------------------------------------------
-   设计原则（2026-10-20 重做版）——"高级感"不靠特效，靠克制：
-     1. 颜色只分两层：中性（黑/灰/白）+ 一个强调色（铜金 --accent）。
-        原来满屏青色发光是最显廉价的地方，已经全部去掉。
-     2. 不用发光、不用阴影、不用圆角药丸。结构靠 1px 发丝线（--line）划分。
-     3. 层级靠"字号反差 + 字距"拉开：数字很大、标签很小且字距宽。
-     4. 强调色只用在"最该看的地方"：选中项、第一名、关键数值。
+   设计方向（2026-10-20 v5「Pudding 风」）：
+     1. 深 + 浅 混排：顶栏与 Banner 是深色，KPI 行是浅色（纸感），
+        用"区块"制造节奏，不追求全屏统一底色。
+     2. 字体对比：标题一律用 **宋体（衬线）**，正文与数字用无衬线。
+        衬线中文在近黑底上有强烈的"编辑感"——这是本轮最大的观感变化。
+     3. 双强调色：铜金 --accent 为主，珊瑚橘 --hot 为辅（只用于 Banner 和个别数字）。
+     4. 不用发光、不用阴影、不用大圆角。结构靠 1px 发丝线（--line）划分。
 
    想改 UI，90% 的情况只需要改下面 :root 里的变量。
    ========================================================================== */
@@ -16,26 +17,36 @@
   /* 底色：近黑，不是纯黑（纯黑显得硬，近黑才有层次） */
   --bg: #08090b;
   --bg-2: #0b0d10;
-  --surface: #0e1114;                 /* 卡片底色 */
+  --surface: #0e1114;                 /* 深色卡片底色 */
   --surface-2: #12161a;               /* 次级底色（悬停、表格隔行） */
+  --paper: #f2efe6;                   /* 浅色卡片（纸感米白） */
+  --paper-2: #e9e5d9;
+  --ink: #14161a;                     /* 浅色卡片上的文字 */
 
   /* 结构线：白色低透明度，比彩色线高级得多 */
   --line: rgba(255, 255, 255, .07);
   --line-strong: rgba(255, 255, 255, .12);
+  --line-ink: rgba(0, 0, 0, .12);     /* 浅色卡片上的线 */
 
   /* 文字三级 */
   --text: #eceff2;                    /* 主文字（不用纯白 #fff，略带灰更耐看） */
   --text-dim: #8b9299;                /* 次要文字 */
   --text-mute: #5c636b;               /* 最弱：编号、单位、脚注 */
 
-  /* 强调色：只有一个。想换主题色就改这三行 */
-  --accent: #e8b95f;                  /* 铜金 —— 和"影视/奖项"的语境搭 */
+  /* 强调色：主色铜金 + 辅色珊瑚橘。想换主题色就改这几行 */
+  --accent: #e8b95f;                  /* 铜金：主强调 */
   --accent-soft: rgba(232, 185, 95, .14);
   --accent-line: rgba(232, 185, 95, .45);
+  --hot: #ff6b4a;                     /* 珊瑚橘：辅色，只用在 Banner 与个别数字 */
+  --hot-soft: rgba(255, 107, 74, .16);
+
+  /* 字体：标题用衬线（宋体），正文与数字用无衬线 —— 这个对比就是"高级感"的来源 */
+  --font-serif: "SimSun", "宋体", "Noto Serif SC", "Source Han Serif SC", "Songti SC", serif;
+  --font-sans: "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif;
 
   --dot: rgba(255, 255, 255, .045);   /* 背景点阵（很淡，只在近处看得见） */
 
-  --title-size: 13.5px;               /* 卡片标题字号 */
+  --title-size: 14px;               /* 卡片标题字号 */
   --gap: 14px;                        /* 卡片间距 */
   --radius: 3px;                      /* 圆角：小一点更"利" */
 }
@@ -52,9 +63,21 @@ html, body {
     radial-gradient(circle, var(--dot) 1px, transparent 1.4px);
   background-size: 100% 100%, 24px 24px;
   color: var(--text);
-  font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
+
+/* ===== 衬线字体统一规则：所有"标题类"元素都用宋体 =====
+   想整体换回黑体，只需把 --font-serif 改成 "Microsoft YaHei"。 */
+.top-bar h1, .banner-line, .banner-eyebrow, .kpi .val,
+.card > h3, .bottom-card > h3, .bs-item i { font-family: var(--font-serif); }
+
+/* 中文宋体在浏览器里只有 400/700 两档，700 仍然偏细。
+   用极细描边把笔画"压粗"一点，视觉上更接近设计稿的粗衬线。 */
+.top-bar h1, .banner-line, .kpi .val, .card > h3, .bs-item i {
+  -webkit-text-stroke: .35px currentColor;
+}
+.kpi .lab, .chip, .kicker { -webkit-text-stroke: 0; }   /* 小字不要描边，会糊 */
 
 /* 数字统一用等宽数字，换数值时不会左右跳 */
 .kpi .val, .rank-row span, .card > h3 .idx { font-variant-numeric: tabular-nums; }
@@ -74,10 +97,10 @@ html, body {
   display: flex; align-items: center;
   border-bottom: 1px solid var(--line);
 }
-.brand { display: flex; flex-direction: column; gap: 5px; }
+.brand { display: flex; flex-direction: column; gap: 4px; }
 .top-bar h1 {
-  font-size: 23px; font-weight: 600; letter-spacing: .5px; color: var(--text);
-  line-height: 1.1;
+  font-size: 30px; font-weight: 700; letter-spacing: 1px; color: var(--text);
+  line-height: 1.05;
 }
 /* 标题里那个渐变色块：白 → 铜金，克制的一点点颜色 */
 .top-bar h1 .grad {
@@ -87,7 +110,8 @@ html, body {
 }
 /* 标题下面的小字副题（内容由 main.js 按真实数据填，不会写死） */
 .kicker {
-  font-size: 10px; letter-spacing: 2.4px; color: var(--text-mute);
+  font-family: var(--font-sans);
+  font-size: 9.5px; letter-spacing: 2.6px; color: var(--text-mute);
   text-transform: uppercase;
 }
 
@@ -122,26 +146,78 @@ html, body {
 }
 #clock { color: var(--text-dim); font-size: 13px; letter-spacing: 1.4px; }
 
-/* ---------- ③ KPI 行：只有数字和标签，没有任何卡片装饰 ---------- */
+/* ---------- ②-b 全景 Banner：首屏第一句话（深色块，左结论 + 右支撑数字） ---------- */
+.banner {
+  flex: none; height: 104px; margin-top: 6px;
+  display: grid; grid-template-columns: 1fr 470px;
+  background: var(--surface);                     /* 比页面底色亮一档的深色块 */
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--hot);              /* 左边缘一条珊瑚橘，全屏第二处辅色 */
+  border-radius: var(--radius);
+  padding: 11px 22px;
+  overflow: hidden;
+}
+.banner-main { display: flex; flex-direction: column; justify-content: center; }
+.banner-eyebrow {
+  font-size: 9.5px; letter-spacing: 2.6px; color: var(--hot);
+  text-transform: uppercase; margin-bottom: 8px;
+}
+/* 主句：巨型衬线 + 行高紧，数字用铜金 */
+.banner-line {
+  font-size: 23px; font-weight: 700; line-height: 1.36;
+  color: var(--text); letter-spacing: .5px;
+}
+.banner-line em {
+  font-style: normal; color: var(--accent);
+  font-size: 36px; line-height: 1; letter-spacing: -1px;
+  display: inline-block; margin: 0 2px;
+}
+/* 下划线强调的那半句：珊瑚橘下划线，呼应左边缘 */
+.banner-line .u {
+  border-bottom: 3px solid var(--hot);
+  padding-bottom: 1px;
+}
+/* 右侧三个支撑数字：小字标签 + 衬线数字 */
+.banner-side {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  border-left: 1px solid var(--line);
+  padding-left: 20px; align-items: center;
+}
+.bs-item { display: flex; flex-direction: column; gap: 7px; padding-left: 14px;
+           border-left: 1px solid var(--line); }
+.bs-item:first-child { border-left: none; padding-left: 0; }
+.bs-item i {
+  font-style: normal; font-size: 26px; font-weight: 700; line-height: 1;
+  color: var(--accent); letter-spacing: -.5px;
+}
+.bs-item span {
+  font-size: 9.5px; letter-spacing: 1.2px; color: var(--text-mute); line-height: 1.35;
+}
+
+/* ---------- ③ KPI 行：浅色纸感区块，只有数字和标签 ---------- */
 .kpi-row {
-  flex: none; height: 112px;
+  flex: none; height: 84px;
   display: grid; grid-template-columns: repeat(6, 1fr); align-items: center;
-  border-bottom: 1px solid var(--line);
+  background: var(--paper);                       /* 深底上的一块浅色，制造"深浅混排" */
+  border-radius: var(--radius);
+  padding: 0 4px;
+  margin-top: 2px;
 }
 .kpi {
-  height: 100%; padding-left: 22px;
-  border-left: 1px solid var(--line);
+  height: 100%; padding-left: 20px;
+  border-left: 1px solid var(--line-ink);
   display: flex; flex-direction: column; justify-content: center;
 }
-.kpi:first-child { border-left: none; padding-left: 2px; }
+.kpi:first-child { border-left: none; padding-left: 22px; }
 .kpi .val {
-  font-size: 50px; line-height: 1; font-weight: 600;
-  letter-spacing: -2px;                            /* 大字号收紧字距，显得"紧凑利落" */
-  color: var(--text);
+  font-size: 40px; line-height: 1; font-weight: 700;
+  letter-spacing: -1.5px;                          /* 大字号收紧字距，显得"紧凑利落" */
+  color: var(--ink);                               /* 浅底上用深墨色 */
 }
 .kpi .lab {
-  margin-top: 10px; font-size: 10px; letter-spacing: 2.4px;
-  color: var(--text-mute); text-transform: uppercase;
+  margin-top: 8px; font-family: var(--font-sans);
+  font-size: 9.5px; letter-spacing: 2px;
+  color: #6b6f76; text-transform: uppercase;
 }
 
 /* ---------- ④ 主区三列：左中右宽度可以在这里改 ---------- */
@@ -212,7 +288,7 @@ html, body {
 }
 
 /* ---------- ⑦ 底栏 + 页脚 ---------- */
-.bottom-card { flex: none; height: 168px; }
+.bottom-card { flex: none; height: 152px; }
 footer {
   flex: none; height: 18px;
   font-size: 10px; letter-spacing: 1.4px; color: var(--text-mute);

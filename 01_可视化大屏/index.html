@@ -21,10 +21,10 @@
      这样不管屏幕多大，大屏的排版都不会乱。 -->
 <div id="stage">
 
-  <!-- ========== ① 顶栏：左（标题 + 小字副题）· 右（筛选按钮 + 时间） ========== -->
+  <!-- ========== ① 顶栏：左（衬线标题 + 英文副题）· 右（筛选按钮 + 时间） ========== -->
   <header class="top-bar">
     <div class="brand">
-      <h1>豆瓣<span class="grad">影视</span>数据大屏</h1>
+      <h1>豆瓣<span class="grad">影视</span>数据</h1>
       <!-- 副题里的数字由 js/main.js 按 data.js 真实数据填，不会写死 -->
       <div class="kicker" id="kicker">DOUBAN FILM DATA</div>
     </div>
@@ -37,10 +37,28 @@
     </div>
   </header>
 
-  <!-- ========== ② KPI 卡片行：6 个关键数字，内容由 js/main.js 填 ========== -->
+  <!-- ========== ② 全景 Banner：首屏第一句话 ==========
+       左：一句结论（巨型衬线数字 + 白字）；右：三个支撑数字。
+       文案里的数字由 js/main.js 的 fillBanner() 从 data.js 的 banner 字段填入。 -->
+  <section class="banner">
+    <div class="banner-main">
+      <div class="banner-eyebrow">FINDING 01 · 高分不等于高热度</div>
+      <p class="banner-line">
+        <em id="bnHot">--</em> 部作品评分在 9 分以上，<br>
+        却连 <span class="u">十万人</span> 都没评价过 —— 占全库 <em id="bnPct">--</em>%
+      </p>
+    </div>
+    <div class="banner-side">
+      <div class="bs-item"><i id="bsFive">--</i><span>平均五星占比</span></div>
+      <div class="bs-item"><i id="bsGood">--</i><span>平均好评率（四星+五星）</span></div>
+      <div class="bs-item"><i id="bsDecade">--</i><span>作品最多的年代</span></div>
+    </div>
+  </section>
+
+  <!-- ========== ③ KPI 卡片行：6 个关键数字，内容由 js/main.js 填 ========== -->
   <section class="kpi-row" id="kpiRow"></section>
 
-  <!-- ========== ③ 主区：左 / 中 / 右 三列 ========== -->
+  <!-- ========== ④ 主区：左 / 中 / 右 三列 ========== -->
   <main class="main-grid">
 
     <!-- ---------- 左列：3 张图（col-3 = 三行等高；想调高度改 css 里的 .col-3） ---------- -->
@@ -64,7 +82,7 @@
     </div>
   </main>
 
-  <!-- ========== ④ 底栏：短评数量随年份变化 ========== -->
+  <!-- ========== ⑤ 底栏：短评数量随年份变化 ========== -->
   <section class="card bottom-card">
     <h3><span class="idx">09</span>短评数量随年份变化</h3>
     <div class="chart" id="chartYear"></div>

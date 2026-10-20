@@ -56,6 +56,32 @@ function fillKicker() {
     k.comments + ' REVIEWS · ' + k.movies + ' MOVIES / ' + k.tvs + ' SERIES';
 }
 
+/* 3.3 全景 Banner：把 data.js 的 banner 字段填进首屏那句结论里
+   （HTML 里只写了文案骨架，所有数字都在这里补，换数据不用改 HTML） */
+function fillBanner() {
+  const b = D.banner;
+  if (!b) return;
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  set('bnHot', b.hot);                       // 9 分以上却不足十万人评价的作品数
+  set('bnPct', b.hot_pct);                   // 占全库的百分比
+  set('bsFive', b.avg_five + '%');           // 平均五星占比
+  set('bsGood', b.avg_good + '%');           // 平均好评率
+  set('bsDecade', b.decade_top);             // 作品最多的年代
+}
+
+/* 3.4 让"01 类型 TOP10""06 制片国家 TOP10"的标题跟着实际条数走（charts.js 里 TOP=8） */
+function fixTopTitles() {
+  [['chartGenre', '类型'], ['chartCountry', '制片国家 / 地区']].forEach(function (it) {
+    const h3 = document.querySelector('#' + it[0]).parentNode.querySelector('h3');
+    if (!h3) return;
+    Array.prototype.slice.call(h3.childNodes).forEach(function (n) {
+      if (n.nodeType === 3 && n.textContent.indexOf('TOP') >= 0) {   // 只改纯文本节点，保留 <span class="idx">
+        n.textContent = it[1] + ' TOP' + TOP;
+      }
+    });
+  });
+}
+
 /* 3.5 地图标题右侧补一句：海外用户不在中国地图里
    ★ 注意：不能用 h3.textContent += '…'，那会把标题里的 <span class="idx">01</span>
      编号整个覆盖掉。改成新建一个 <span class="meta"> 追加到标题末尾（由 CSS 推到最右）。 */
@@ -108,6 +134,8 @@ window.addEventListener('load', function () {
   fitStage();
   fillKpi();
   fillKicker();
+  fillBanner();
+  fixTopTitles();
   buildChips();
   noteMapTitle();
   tick();

@@ -296,6 +296,34 @@ for ck, _clab, sub in CALIBERS:
 print("筛选数据：口径 %d 种 × 年代 %d 种 = %d 组" % (len(CALIBERS), len(DECADES), len(cross)))
 
 
+# ---------- 13.5 全景 Banner：把最有叙事价值的几组数字预先算好 ----------
+# Banner 是首屏第一眼看到的东西，所以放"一句话结论"而不是罗列数字。
+# 想换结论 → 改下面的筛选条件；想换文案 → 改 index.html 里 Banner 那几个 span 即可。
+n_rated = len(rated)
+
+
+def _num(m, k):
+    return num(m.get(k))
+
+
+# 最反直觉的事实：9 分以上却不足十万人评价（高分但小众）
+rated_hot = [m for m in rated if _num(m, "rating_num") >= 9.0 and 0 < _num(m, "votes") < 100000]
+banner = {
+    "hot": len(rated_hot),
+    "hot_pct": int(round(100.0 * len(rated_hot) / max(n_rated, 1))),
+    "rating9": sum(1 for m in rated if _num(m, "rating_num") >= 9.0),
+    # 三个支撑数字
+    "avg_five": round(sum(_num(m, "p5") for m in rated) / max(n_rated, 1), 1),          # 平均五星占比
+    "avg_good": round(sum(_num(m, "good_rate") for m in rated) / max(n_rated, 1), 1),   # 平均好评率
+    "decade_top": max(decade_cnt, key=decade_cnt.get),                                  # 作品最多的年代
+    "decade_top_n": max(decade_cnt.values()),
+    "genre_top": genre_counter.most_common(1)[0][0],
+    "genre_top_n": genre_counter.most_common(1)[0][1],
+}
+print("Banner：9 分以上 %d 部 / 其中不足 10 万人评的 %d 部（%d%%）"
+      % (banner["rating9"], banner["hot"], banner["hot_pct"]))
+
+
 # ---------- 14. 写文件 ----------
 dash = {
     "updated": __import__("datetime").datetime.now().strftime("%Y-%m-%d %H:%M"),
@@ -311,6 +339,7 @@ dash = {
     "topMovies": top_movies,
     "yearTrend": year_trend,
     "wordCloud": word_cloud,
+    "banner": banner,
     "filters": {
         "calibers": [{"key": k, "label": lab} for k, lab, _s in CALIBERS],
         "decades": [{"key": k, "label": lab} for k, lab, _d in DECADES],
