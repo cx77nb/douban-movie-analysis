@@ -21,15 +21,19 @@
      这样不管屏幕多大，大屏的排版都不会乱。 -->
 <div id="stage">
 
-  <!-- ========== ① 顶栏：左侧筛选按钮 + 标题 + 右侧时间 ========== -->
+  <!-- ========== ① 顶栏：左（标题 + 小字副题）· 右（筛选按钮 + 时间） ========== -->
   <header class="top-bar">
+    <div class="brand">
+      <h1>豆瓣<span class="grad">影视</span>数据大屏</h1>
+      <!-- 副题里的数字由 js/main.js 按 data.js 真实数据填，不会写死 -->
+      <div class="kicker" id="kicker">DOUBAN FILM DATA</div>
+    </div>
     <!-- 筛选按钮（chips）：内容由 js/main.js 的 buildChips() 生成，
          数据来自 js/data.js 的 filters；点一下会重画 01/02/06/07 四张图 -->
     <div class="top-left" id="chipBar"></div>
-    <h1>豆瓣<span class="grad">影视</span>数据大屏</h1>
     <div class="top-right">
-      <span id="dataTime">数据更新：--</span>
       <span id="clock">--:--:--</span>
+      <span id="dataTime">数据更新：--</span>
     </div>
   </header>
 
@@ -67,7 +71,8 @@
   </section>
 
   <footer>
-    数据来源：豆瓣电影（本机 Python 采集，1052 部作品 / 4695 条短评）
+    <span>数据来源：豆瓣电影（本机 Python 采集 · 免登录）</span>
+    <span>离线渲染 · 无需服务器 · ECharts 5.5.1</span>
   </footer>
 </div>
 

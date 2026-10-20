@@ -9,34 +9,39 @@
 
    想改某张图：只改它对应的 buildXxx() 函数里的 option，比如
      · 想换成柱状图：把 option 里的 type: 'line' 改成 type: 'bar'
-     · 想改颜色：改 color 数组，或用 FX.cyan 这类变量
+     · 想改颜色：改 color 数组，或用 FX.accent / FX.bar 这类变量
      · 想改显示条数：改函数里 .slice(0, 10) 的 10
    ========================================================================== */
 
 /* ---------- 0. 公共样式 ---------- */
+/* 配色原则：中性灰打底，**只有一个强调色**。
+   想换主题色，只改 FX.accent 一行（CSS 里的 --accent 也一起改）。 */
 const FX = {
-  cyan: '#00e6ff',            // 主色
-  blue: '#3f7bff',            // 副色
-  purple: '#9d6bff',
-  gold: '#ffc44d',
-  green: '#3ddc97',
-  dim: '#7fa6c8',             // 次要文字色
-  axis: 'rgba(0,214,255,.35)' // 坐标轴颜色
+  accent: '#e8b95f',                  // 唯一的彩色：铜金
+  text: '#eceff2',                    // 主文字（不用纯白）
+  dim: '#8b9299',                     // 次要文字 / 坐标轴
+  mute: '#5c636b',                    // 最弱：单位、编号
+  line: 'rgba(255,255,255,.07)',      // 结构线
+  bar: 'rgba(255,255,255,.20)',       // 普通柱子：中性灰
+  barDim: 'rgba(255,255,255,.13)'     // 更弱的柱子（背景层）
 };
 
 // 类目轴 / 数值轴的公用配置（每个图里用 ...AXIS 展开复用）
 const AXIS = {
-  axisLine: { lineStyle: { color: FX.axis } },
+  axisLine: { lineStyle: { color: FX.line } },
   axisTick: { show: false },
-  axisLabel: { color: FX.dim, fontSize: 11 },
-  splitLine: { lineStyle: { color: 'rgba(0,214,255,.12)' } }
+  axisLabel: { color: FX.dim, fontSize: 10 },
+  splitLine: { lineStyle: { color: 'rgba(255,255,255,.05)' } }
 };
 
-// 提示框（鼠标移上去的小浮窗）公用样式
+// 提示框（鼠标移上去的小浮窗）公用样式：深灰底 + 发丝边，不要发光
 const TIP = {
-  backgroundColor: 'rgba(6,20,40,.92)',
-  borderColor: FX.axis,
-  textStyle: { color: '#e8f4ff', fontSize: 12 }
+  backgroundColor: 'rgba(14,17,20,.97)',
+  borderColor: 'rgba(255,255,255,.12)',
+  borderWidth: 1,
+  padding: [8, 11],
+  textStyle: { color: FX.text, fontSize: 12 },
+  extraCssText: 'border-radius:3px;box-shadow:none;'
 };
 
 // 图表文字通用字体设置
@@ -97,14 +102,16 @@ function buildGenre() {
     series: [{
       type: 'bar',
       data: rows.map(r => r.value),
-      barWidth: 12,
+      barWidth: 10,
+      // 只有第一名（reverse 后是最后一条）用铜金，其余全是中性灰 —— "只亮重点"
       itemStyle: {
-        borderRadius: 6,
-        // 每根柱子从青色渐变到蓝色
-        color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
-          { offset: 0, color: FX.blue }, { offset: 1, color: FX.cyan }])
+        borderRadius: 1,
+        color: p => (p.dataIndex === rows.length - 1 ? FX.accent : FX.bar)
       },
-      label: { show: true, position: 'right', color: FX.cyan, fontSize: 11 }
+      label: {
+        show: true, position: 'right', fontSize: 10,
+        color: p => (p.dataIndex === rows.length - 1 ? FX.accent : FX.dim)
+      }
     }]
   });
 }
@@ -127,10 +134,10 @@ function buildDecade() {
       { type: 'value', ...AXIS, min: 6, max: 10, splitLine: { show: false } }
     ],
     series: [
-      { name: '作品数', type: 'bar', data: dec.counts, barWidth: 16,
-        itemStyle: { color: 'rgba(63,123,255,.55)', borderRadius: [4, 4, 0, 0] } },
+      { name: '作品数', type: 'bar', data: dec.counts, barWidth: 14,
+        itemStyle: { color: FX.barDim, borderRadius: 1 } },
       { name: '平均分', type: 'line', yAxisIndex: 1, data: dec.avg, smooth: true,
-        symbolSize: 6, lineStyle: { color: FX.gold, width: 2 }, itemStyle: { color: FX.gold } }
+        symbolSize: 5, lineStyle: { color: FX.accent, width: 1.6 }, itemStyle: { color: FX.accent } }
     ]
   });
 }
@@ -140,15 +147,17 @@ function buildStar() {
   draw('chartStar', {
     ...FONT,
     tooltip: { ...TIP, trigger: 'item', formatter: '{b}：{c} 条（{d}%）' },
-    legend: { bottom: 0, textStyle: { color: FX.dim, fontSize: 11 }, itemWidth: 10, itemHeight: 8 },
-    color: [FX.cyan, FX.blue, FX.purple, FX.gold, '#ff7a7a', '#4a5a72'],
+    legend: { bottom: 0, textStyle: { color: FX.dim, fontSize: 10 }, itemWidth: 8, itemHeight: 8, itemGap: 14 },
+    // 单色阶：5 星最亮（铜金），星级越低越暗，"未评分"用中性灰
+    color: ['#e8b95f', '#c79a47', '#9e7935', '#755727', '#4a3a1d', '#2a2e33'],
     series: [{
       type: 'pie',
-      radius: ['42%', '68%'],                  // 内径/外径 → 环形
-      center: ['50%', '45%'],
+      radius: ['50%', '74%'],                  // 内径/外径 → 环形
+      center: ['50%', '44%'],
       data: D.starDist,
-      label: { color: '#e8f4ff', fontSize: 11, formatter: '{b}\n{d}%' },
-      labelLine: { length: 8, length2: 8, smooth: true },
+      itemStyle: { borderColor: '#0e1114', borderWidth: 2 },   // 扇区之间留一条底色缝，更精致
+      label: { color: FX.text, fontSize: 10.5, formatter: '{b} {d}%' },
+      labelLine: { length: 10, length2: 8, smooth: true, lineStyle: { color: 'rgba(255,255,255,.18)' } },
       // 关键：扇区角度小于 6° 的不画标签。
       // 1星/2星/未评分 只占 0.6%~1.7%，硬画标签必然和邻居叠在一起；
       // 它们的数量在下方图例和鼠标提示里都能看到，不会丢信息。
@@ -165,18 +174,24 @@ function buildMap() {
   draw('chartMap', {
     ...FONT,
     tooltip: { ...TIP, formatter: p => p.name + '：' + (p.value || 0) + ' 条短评' },
-    // 左下角的颜色标尺：颜色越亮代表短评越多（calculable:false → 不要那个拖动的白色滑块）
+    // 左下角的颜色标尺：越亮代表短评越多（深灰 → 铜金，不用青色）
     visualMap: {
-      min: 0, max: D.mapMax, left: 16, bottom: 24, calculable: false,
-      itemWidth: 10, itemHeight: 80,
-      inRange: { color: ['#0b2a4a', '#12659b', '#00b3d6', '#00e6ff'] },
-      textStyle: { color: FX.dim, fontSize: 11 }
+      min: 0, max: D.mapMax, left: 14, bottom: 16, calculable: false,
+      itemWidth: 8, itemHeight: 62, itemGap: 8,
+      text: ['多', '少'],                   // 显式写出两端含义，默认的英文提示太小
+      inRange: { color: ['#15191f', '#2f2517', '#5b4523', '#9c7534', '#e8b95f'] },
+      textStyle: { color: FX.mute, fontSize: 9.5 }
     },
     series: [{
       type: 'map', map: 'china', roam: false,
-      label: { show: true, color: 'rgba(232,244,255,.65)', fontSize: 9 },
-      itemStyle: { borderColor: 'rgba(0,214,255,.45)', borderWidth: 1, areaColor: '#0b2a4a' },
-      emphasis: { label: { color: '#fff' }, itemStyle: { areaColor: FX.blue } },
+      // 放大一点，别让地图缩在卡片中间一小块
+      layoutCenter: ['53%', '53%'], layoutSize: '122%',
+      /* ★ 省名默认不显示。1052 部作品的短评高度集中在东部，省市名字会全挤成一团，
+         这是最容易显乱的地方；鼠标移上去（emphasis）才显示名字，
+         而"哪里人多"这件事已经由颜色表达了。 */
+      label: { show: false },
+      itemStyle: { borderColor: 'rgba(255,255,255,.16)', borderWidth: 1, areaColor: '#161b21' },
+      emphasis: { label: { show: true, color: '#fff', fontSize: 11 }, itemStyle: { areaColor: '#4a3b22' } },
       data: D.mapData
     }]
   });
@@ -191,7 +206,8 @@ function buildScatter() {
       formatter: p => p.data[2] + '<br/>评分 ' + p.data[0] + ' ／ 评价人数 ' + p.data[1].toLocaleString()
     },
     grid: { left: 68, right: 16, top: 12, bottom: 26 },
-    xAxis: { type: 'value', min: 6, max: 10, name: '评分', nameTextStyle: { color: FX.dim, fontSize: 10 }, ...AXIS },
+    // 评分几乎全在 8~10 分，横轴从 6 开始会在左边留一大片空白，所以收紧到 7.8
+    xAxis: { type: 'value', min: 7.8, max: 10, name: '评分', nameTextStyle: { color: FX.mute, fontSize: 9.5 }, ...AXIS },
     // type:'log' → 评价人数从几万到几百万，用对数轴才不会挤成一团
     yAxis: {
       type: 'log', name: '评价人数', nameTextStyle: { color: FX.dim, fontSize: 10 }, ...AXIS,
@@ -201,10 +217,9 @@ function buildScatter() {
     series: [{
       type: 'scatter',
       data: D.scatter,
-      symbolSize: 7,
+      symbolSize: 5,
       itemStyle: {
-        color: FX.cyan, opacity: .6,
-        shadowBlur: 8, shadowColor: 'rgba(0,214,255,.6)'
+        color: FX.accent, opacity: .55         // 半透明小点，密集处自然叠出层次；不加发光
       }
     }]
   });
@@ -220,13 +235,16 @@ function buildCountry() {
     xAxis: { type: 'value', ...AXIS, axisLabel: { show: false }, splitLine: { show: false } },
     yAxis: { type: 'category', data: rows.map(r => r.name), ...AXIS, splitLine: { show: false } },
     series: [{
-      type: 'bar', data: rows.map(r => r.value), barWidth: 12,
+      type: 'bar', data: rows.map(r => r.value), barWidth: 10,
+      // 同样只高亮第一名
       itemStyle: {
-        borderRadius: 6,
-        color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
-          { offset: 0, color: FX.purple }, { offset: 1, color: FX.cyan }])
+        borderRadius: 1,
+        color: p => (p.dataIndex === rows.length - 1 ? FX.accent : FX.bar)
       },
-      label: { show: true, position: 'right', color: FX.cyan, fontSize: 11 }
+      label: {
+        show: true, position: 'right', fontSize: 10,
+        color: p => (p.dataIndex === rows.length - 1 ? FX.accent : FX.dim)
+      }
     }]
   });
 }
@@ -260,17 +278,25 @@ function buildRankTable() {
 
 /* ---------- 图 8：短评高频词（词云，需要 echarts-wordcloud 插件） ---------- */
 function buildWord() {
+  // 先算最大词频，用它做"高/中/低"三档配色的分界（自适应，不写死阈值）
+  const wmax = Math.max.apply(null, D.wordCloud.map(function (d) { return d.value; }).concat([1]));
   draw('chartWord', {
     ...FONT,
     tooltip: { ...TIP, formatter: p => p.name + '：出现 ' + p.value + ' 次' },
     series: [{
       type: 'wordCloud',
-      shape: 'circle',                 // 词云外形：circle / cardioid / diamond / star...
+      shape: 'circle',
       width: '100%', height: '100%',
-      sizeRange: [10, 34],             // 字的最小/最大字号
-      rotationRange: [0, 0],           // 0 = 不旋转（中文竖排不好看）
-      gridSize: 6,                     // 词与词的间距
-      textStyle: { color: () => ['#00e6ff', '#3f7bff', '#9d6bff', '#3ddc97', '#ffc44d'][Math.floor(Math.random() * 5)] },
+      sizeRange: [11, 36],
+      rotationRange: [0, 0],
+      gridSize: 6,
+      /* 颜色**不要用 Math.random()**：那会让每次刷新颜色都变，看着很廉价。
+         这里按词频固定分三档：高频铜金、中频浅灰、低频暗灰。 */
+      textStyle: {
+        fontFamily: 'Microsoft YaHei, PingFang SC, sans-serif',
+        color: p => (p.value >= wmax * 0.6 ? FX.accent
+          : (p.value >= wmax * 0.22 ? '#cfd4d8' : FX.mute))
+      },
       data: D.wordCloud
     }]
   });
@@ -286,11 +312,11 @@ function buildYear() {
     yAxis: { type: 'value', ...AXIS },
     series: [{
       type: 'line', data: D.yearTrend.values, smooth: true, symbol: 'none',
-      lineStyle: { color: FX.cyan, width: 2 },
-      // 折线下方的渐变填充（青色由深到透明）
+      lineStyle: { color: FX.accent, width: 1.8 },
+      // 折线下方的渐变填充（铜金由淡到透明）
       areaStyle: {
         color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-          { offset: 0, color: 'rgba(0,230,255,.55)' }, { offset: 1, color: 'rgba(0,230,255,0)' }])
+          { offset: 0, color: 'rgba(232,185,95,.28)' }, { offset: 1, color: 'rgba(232,185,95,0)' }])
       }
     }]
   });

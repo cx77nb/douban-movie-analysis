@@ -38,13 +38,22 @@ function fillKpi() {
   ).join('');
 }
 
-/* 3. 时钟 + 数据更新时间 */
+/* 3. 时钟 + 数据更新时间 + 标题副题（副题里的数字从 data.js 取，不写死） */
 function tick() {
   const now = new Date();
   const p = n => (n < 10 ? '0' + n : '' + n);
   document.getElementById('clock').textContent =
     p(now.getHours()) + ':' + p(now.getMinutes()) + ':' + p(now.getSeconds());
-  document.getElementById('dataTime').textContent = '数据更新：' + D.updated;
+  document.getElementById('dataTime').textContent = '数据更新 ' + D.updated;
+}
+
+/* 3.2 标题下的小字副题：作品数 / 短评数 / 电影剧集拆分 */
+function fillKicker() {
+  const el = document.getElementById('kicker');
+  if (!el) return;
+  const k = D.kpi;
+  el.textContent = 'DOUBAN FILM DATA · ' + k.works + ' WORKS · ' +
+    k.comments + ' REVIEWS · ' + k.movies + ' MOVIES / ' + k.tvs + ' SERIES';
 }
 
 /* 3.5 地图标题右侧补一句：海外用户不在中国地图里
@@ -98,6 +107,7 @@ window.addEventListener('resize', function () {
 window.addEventListener('load', function () {
   fitStage();
   fillKpi();
+  fillKicker();
   buildChips();
   noteMapTitle();
   tick();
